@@ -1,4 +1,3 @@
-// src/components/RolagensPainel.jsx
 import React from "react";
 
 const categoryStyles = {
@@ -25,6 +24,20 @@ const categoryStyles = {
     fontWeight: "bold",
   },
 };
+
+function formatarHorario(valor) {
+  if (!valor) return "—";
+  try {
+    const date = new Date(valor);
+    if (isNaN(date)) return valor;
+    const horas = String(date.getHours()).padStart(2, "0");
+    const minutos = String(date.getMinutes()).padStart(2, "0");
+    const segundos = String(date.getSeconds()).padStart(2, "0");
+    return `${horas}:${minutos}:${segundos}`;
+  } catch {
+    return valor;
+  }
+}
 
 export default function RolagensPainel({ rolagens }) {
   return (
@@ -73,7 +86,19 @@ export default function RolagensPainel({ rolagens }) {
               <div style={{ fontWeight: "bold" }}>
                 {r["Nome do Personagem"] || "—"}
               </div>
-              <div style={{ fontSize: 11, color: "#999" }}>{r.Horario}</div>
+
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#999",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                🕒 {formatarHorario(r.Horário)}
+              </div>
+
               <div style={{ marginTop: 4 }}>
                 <strong>Tipo:</strong> {r.Tipo} | <strong>Nome:</strong> {r.Nome}
               </div>
