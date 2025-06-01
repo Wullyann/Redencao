@@ -7,7 +7,6 @@ export default function Painel() {
 
   useEffect(() => {
     const dados = localStorage.getItem("usuario");
-
     if (!dados) {
       navigate("/");
     } else {
@@ -20,41 +19,58 @@ export default function Painel() {
     }
   }, [navigate]);
 
-  if (!usuario) {
-    return <div className="p-6 text-white">Carregando...</div>;
-  }
-
   const sair = () => {
     localStorage.removeItem("usuario");
     navigate("/");
   };
 
-  return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-xl mx-auto bg-gray-900 rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-4">Painel do Mestre</h1>
-        <p className="mb-2">Bem-vindo, <strong>{usuario.nome}</strong></p>
-        <p className="mb-4 text-sm text-gray-400">Tipo de acesso: {usuario.tipo}</p>
+  if (!usuario) {
+    return <div style={{ color: "#fff", padding: 24 }}>Carregando...</div>;
+  }
 
-        <div className="space-y-2">
+  return (
+    <div style={{ background: "#000", minHeight: "100vh", color: "#D4AF37", padding: 24 }}>
+      <div
+        style={{
+          maxWidth: 480,
+          margin: "0 auto",
+          background: "#111",
+          border: "2px solid #D4AF37",
+          borderRadius: 16,
+          padding: 32,
+          boxShadow: "0 0 16px #D4AF37",
+        }}
+      >
+        <h1 style={{ fontSize: 28, marginBottom: 8, textAlign: "center" }}> Escudo do Mestre</h1>
+        <p style={{ textAlign: "center", color: "#aaa", marginBottom: 24 }}>
+          Acesso concedido a <strong>{usuario.nome}</strong>
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <button
-            onClick={() => navigate("/fichas")}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 px-4 rounded"
+            onClick={() => navigate("/escudo")}
+            style={botaoEstilo("#FFD700", "#000")}
           >
-            Visualizar/Editar Fichas
+             Acessar Escudo do Mestre
           </button>
 
-            <button
-            onClick={() => navigate("/criar-ficha")}
-            className="w-full bg-green-600 hover:bg-green-700 py-2 px-4 rounded"
-            >
-            Criar Nova Ficha
-            </button>
+          <button
+            onClick={() => navigate("/fichas")}
+            style={botaoEstilo("#6366f1")}
+          >
+             Visualizar / Editar Fichas
+          </button>
 
+          <button
+            onClick={() => navigate("/criar-ficha")}
+            style={botaoEstilo("#22c55e")}
+          >
+             Criar Nova Ficha
+          </button>
 
           <button
             onClick={sair}
-            className="w-full bg-red-600 hover:bg-red-700 py-2 px-4 rounded"
+            style={botaoEstilo("#ef4444")}
           >
             Sair
           </button>
@@ -62,4 +78,19 @@ export default function Painel() {
       </div>
     </div>
   );
+}
+
+function botaoEstilo(bg, color = "#fff") {
+  return {
+    padding: "12px 16px",
+    backgroundColor: bg,
+    color: color,
+    border: "none",
+    borderRadius: 8,
+    fontWeight: "bold",
+    cursor: "pointer",
+    fontSize: 16,
+    boxShadow: "0 0 8px rgba(255, 255, 255, 0.1)",
+    transition: "0.3s",
+  };
 }

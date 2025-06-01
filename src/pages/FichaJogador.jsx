@@ -151,6 +151,9 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel)));
       formData.append("PV Atual", pvAtual);
       formData.append("PE Atual", peAtual);
       formData.append("Sanidade Atual", sanAtual);
+      formData.append("PV Máx.", pvMax);
+      formData.append("PE Máx.", peMax);
+      formData.append("Sanidade Máx.", sanMax);
       ATRIBUTOS.forEach((a) => formData.append(a, ficha[a]));
       Object.entries(bonusManual).forEach(([nome, valor]) => {
         formData.append(`Bonus_${nome}`, valor);
@@ -277,6 +280,9 @@ const rolarAttr = (nome, valor) => {
     formData.append("PV Atual", pvAtual);
     formData.append("PE Atual", peAtual);
     formData.append("Sanidade Atual", sanAtual);
+    formData.append("PV Máx.", pvMax);
+    formData.append("PE Máx.", peMax);
+    formData.append("Sanidade Máx.", sanMax);
     ATRIBUTOS.forEach((a) => formData.append(a, ficha[a]));
     Object.entries(bonusManual).forEach(([nome, valor]) => {
       formData.append(`Bonus_${nome}`, valor);
@@ -310,11 +316,10 @@ const rolarAttr = (nome, valor) => {
       >
         {/* Lateral: Header e Vital Stats */}
         <div style={{ flex: "1 1 300px" }}>
-          <UploadImagem onUploadComplete={(url) => {
+          {/*<UploadImagem onUploadComplete={(url) => {
   setImagemUrl(url);
   setHasChanges(true);
-}} />
-{imagemUrl && (
+}} />{imagemUrl && (
   <div style={{ marginTop: 12 }}>
     <img
       src={imagemUrl}
@@ -326,7 +331,7 @@ const rolarAttr = (nome, valor) => {
       }}
     />
   </div>
-)}
+)}*/}
 
           <CharacterHeader
               ficha={ficha}
