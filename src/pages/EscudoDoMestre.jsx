@@ -13,19 +13,29 @@ export default function EscudoDoMestre() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${BASE_URL}?sheet=Fichas`).then((r) => r.json()),
-      fetch(`${BASE_URL}?sheet=Rolagens`).then((r) => r.json()),
-    ])
-      .then(([dadosFichas, dadosRolagens]) => {
-        setFichas(dadosFichas || []);
-        setRolagens(dadosRolagens || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Erro ao carregar dados:", err);
-        setLoading(false);
-      });
+    // Função que busca fichas e rolagens
+    const carregarDados = () => {
+      Promise.all([
+        fetch(`${BASE_URL}?sheet=Fichas`).then((r) => r.json()),
+        fetch(`${BASE_URL}?sheet=Rolagens`).then((r) => r.json()),
+      ])
+        .then(([dadosFichas, dadosRolagens]) => {
+          setFichas(dadosFichas || []);
+          setRolagens(dadosRolagens || []);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Erro ao carregar dados:", err);
+          setLoading(false);
+        });
+    };
+
+    // Carrega imediatamente ao montar
+    carregarDados();
+
+    // Atualiza a cada 3 segundos
+    const interval = setInterval(carregarDados, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -36,6 +46,7 @@ export default function EscudoDoMestre() {
     );
   }
 
+  // Função que desenha as barras de Vida, PE e Sanidade
   const renderBarra = (label, atual, max, cor, icone) => {
     const percent = Math.max(0, Math.min((atual / max) * 100, 100));
     return (
@@ -89,6 +100,9 @@ export default function EscudoDoMestre() {
           gap: 20,
         }}
       >
+        {/*-------------------
+             Coluna da Esquerda: Painel de Rolagens
+        --------------------*/}
         <aside
           style={{
             width: "30%",
@@ -100,6 +114,9 @@ export default function EscudoDoMestre() {
           <RolagensPainel rolagens={rolagens} />
         </aside>
 
+        {/*-------------------
+             Coluna da Direita: Listagem de Fichas
+        --------------------*/}
         <main
           style={{
             flex: 1,
@@ -199,6 +216,7 @@ export default function EscudoDoMestre() {
         </main>
       </div>
 
+      {/* === Modal de ficha detalhada (é renderizado aqui, fora do map) === */}
       {fichaSelecionada && (
         <ModalFichaDetalhada
           ficha={fichaSelecionada}

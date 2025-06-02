@@ -18,6 +18,7 @@ import {
   getPE,
   getSAN,
 } from "../utils/calculosPorClasse";
+import { useSearchParams } from "react-router-dom";
 
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
@@ -83,31 +84,44 @@ export default function FichaJogador() {
 
 
   // Carrega ficha do jogador
-  useEffect(() => {
-    const data = localStorage.getItem("usuario");
-    if (!data) return navigate("/");
-    const { usuario } = JSON.parse(data);
-    fetch(`${BASE_URL}?sheet=Fichas`)
-      .then((r) => r.json())
-      .then((lista) => {
-        const m = lista.find(
-          (f) =>
-            f["Login do Jogador"]?.toLowerCase() === usuario.toLowerCase()
+const [searchParams] = useSearchParams();
+
+useEffect(() => {
+  const idFromUrl = searchParams.get("id");
+  const data = localStorage.getItem("usuario");
+
+  fetch(`${BASE_URL}?sheet=Fichas`)
+    .then((r) => r.json())
+    .then((lista) => {
+      let m;
+
+      // Se veio ID na URL, busca direto
+      if (idFromUrl) {
+        m = lista.find((f) => String(f.ID) === idFromUrl);
+      } else if (data) {
+        const { usuario } = JSON.parse(data);
+        m = lista.find(
+          (f) => f["Login do Jogador"]?.toLowerCase() === usuario.toLowerCase()
         );
-        if (!m) return;
-        setFicha(m);
-        setImagemUrl(m["Imagem do Personagem"] || "");
-        console.log("🧩 Ficha carregada:", m);
-        const bm = {};
-        Object.keys(m).forEach((k) => {
-          if (k.startsWith("Bonus_")) {
-            bm[k.replace("Bonus_", "")] = +m[k];
-          }
-        });
-        setBonusManual(bm);
-      })
-      .catch(() => navigate("/"));
-  }, [navigate]);
+      }
+
+      if (!m) return navigate("/");
+
+      setFicha(m);
+      setImagemUrl(m["Imagem do Personagem"] || "");
+      console.log("🧩 Ficha carregada:", m);
+
+      const bm = {};
+      Object.keys(m).forEach((k) => {
+        if (k.startsWith("Bonus_")) {
+          bm[k.replace("Bonus_", "")] = +m[k];
+        }
+      });
+      setBonusManual(bm);
+    })
+    .catch(() => navigate("/"));
+}, [navigate, searchParams]);
+
 
   // Atualiza PV/PE/SAN máximos e iniciais
   useEffect(() => {

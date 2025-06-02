@@ -4,6 +4,11 @@ import React from "react";
 export default function ModalFichaDetalhada({ ficha, onClose }) {
   if (!ficha) return null;
 
+  const abrirFichaCompleta = () => {
+    const url = `/ficha?id=${ficha.ID}`;
+    window.open(url, "_blank");
+  };
+
   return (
     <div
       onClick={onClose}
@@ -54,38 +59,44 @@ export default function ModalFichaDetalhada({ ficha, onClose }) {
           {ficha["Nome do Personagem"] || "Ficha Detalhada"}
         </h2>
 
+        <p><strong>Classe:</strong> {ficha.Classe || "—"} — {ficha.Origem || "—"}</p>
+        <p><strong>NEX:</strong> {ficha.NEX || 0}%</p>
         <p>
-          <strong>Classe:</strong> {ficha.Classe || "—"} —{" "}
-          {ficha.Origem || "—"}
+          <strong>AGI:</strong> {ficha.AGI} | <strong>FOR:</strong> {ficha.FOR} |
+          <strong> INT:</strong> {ficha.INT} | <strong>PRE:</strong> {ficha.PRE} |
+          <strong> VIG:</strong> {ficha.VIG} | <strong>SOR:</strong> {ficha.SOR}
+        </p>
+        <p><strong>VIDA:</strong> {ficha["PV Atual"]} / {ficha["PV Máx."]}</p>
+        <p><strong>PE:</strong> {ficha["PE Atual"]} / {ficha["PE Máx."]}</p>
+        <p><strong>SAN:</strong> {ficha["Sanidade Atual"]} / {ficha["Sanidade Máx."]}</p>
+        <p>
+          <strong>Defesa:</strong> {ficha.Defesa || 0} |
+          <strong> Bloqueio:</strong> {ficha.Bloqueio || 0} |
+          <strong> Esquiva:</strong> {ficha.Esquiva || 0}
         </p>
         <p>
-          <strong>NEX:</strong> {ficha.NEX || 0}%
+          <strong>Deslocamento:</strong> {ficha["Deslocamento"] || "—"} |
+          <strong> PE/Turno:</strong> {ficha["PE por Turno"] || "—"}
         </p>
-        <p>
-          <strong>AGI:</strong> {ficha.AGI} | <strong>FOR:</strong> {ficha.FOR} |{" "}
-          <strong>INT:</strong> {ficha.INT} | <strong>PRE:</strong> {ficha.PRE} |{" "}
-          <strong>VIG:</strong> {ficha.VIG} | <strong>SOR:</strong> {ficha.SOR}
-        </p>
-        <p>
-          <strong>VIDA:</strong> {ficha["PV Atual"]} / {ficha["PV Máx."]}
-        </p>
-        <p>
-          <strong>DETERMINAÇÃO:</strong> {ficha["PE Atual"]} /{" "}
-          {ficha["PE Máx."]}
-        </p>
-        <p>
-          <strong>SAN:</strong> {ficha["Sanidade Atual"]} /{" "}
-          {ficha["Sanidade Máx."]}
-        </p>
-        <p>
-          <strong>Defesa:</strong> {ficha.Defesa || 0} |{" "}
-          <strong>Bloqueio:</strong> {ficha.Bloqueio || 0} |{" "}
-          <strong>Esquiva:</strong> {ficha.Esquiva || 0}
-        </p>
-        <p>
-          <strong>Deslocamento:</strong> {ficha["Deslocamento"] || "—"} |{" "}
-          <strong>PE/Turno:</strong> {ficha["PE por Turno"] || "—"}
-        </p>
+
+        {/* Botão para abrir ficha completa */}
+        <button
+          onClick={abrirFichaCompleta}
+          style={{
+            marginTop: 20,
+            padding: "8px 16px",
+            backgroundColor: "#D4AF37",
+            color: "#000",
+            fontWeight: "bold",
+            border: "none",
+            borderRadius: 6,
+            cursor: "pointer",
+            display: "block",
+            width: "100%",
+          }}
+        >
+          🔎 Abrir Ficha Completa
+        </button>
       </div>
     </div>
   );
