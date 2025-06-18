@@ -609,17 +609,7 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
               <div style={{ marginTop: 12, color: '#fff', fontSize: 14 }}>
                 <div>
                   <strong>PE:</strong> {r.PE}
-                  {r.PE && r.Círculo && !isNaN(parseFloat(r.PE)) && (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        ...dtStyles[getDescricaoDT(calcularDT(r.PE, r.Círculo))]
-                      }}
-                    >
-                      Resultado:{' '}
-                      <strong>{getDescricaoDT(calcularDT(r.PE, r.Círculo))}</strong>
-                    </span>
-                  )}
+                  
                 </div>
 
                 <div>

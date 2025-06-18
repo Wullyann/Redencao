@@ -126,17 +126,23 @@ useEffect(() => {
   // Atualiza PV/PE/SAN máximos e iniciais
   useEffect(() => {
     if (!ficha) return;
-    setPvMax(getPV(ficha.Classe, +ficha.VIG, nivel));
-    setPeMax(getPE(ficha.Classe, +ficha.PRE, nivel));
-    setSanMax(getSAN(ficha.Classe, nivel));
+const modPV = Number(ficha["Mod. PV Máx."]) || 0;
+const modPE = Number(ficha["Mod. PE Máx."]) || 0;
+const modSAN = Number(ficha["Mod. SAN Máx."]) || 0;
+
+setPvMax(getPV(ficha.Classe, +ficha.VIG, nivel) + modPV);
+setPeMax(getPE(ficha.Classe, +ficha.PRE, nivel) + modPE);
+setSanMax(getSAN(ficha.Classe, nivel) + modSAN);
+
 const parseOr = (val, fallback) => {
   const num = Number(val);
   return isNaN(num) ? fallback : num;
 };
 
-setPvAtual(parseOr(ficha["PV Atual"], getPV(ficha.Classe, +ficha.VIG, nivel)));
-setPeAtual(parseOr(ficha["PE Atual"], getPE(ficha.Classe, +ficha.PRE, nivel)));
-setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel)));
+setPvAtual(parseOr(ficha["PV Atual"], getPV(ficha.Classe, +ficha.VIG, nivel) + modPV));
+setPeAtual(parseOr(ficha["PE Atual"], getPE(ficha.Classe, +ficha.PRE, nivel) + modPE));
+setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSAN));
+
 
   }, [ficha]);
 
