@@ -1,0 +1,338 @@
+.portrait-page {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  overflow: hidden;
+  background: transparent !important;
+  color: #fff;
+  font-family: "Montserrat", Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.portrait-page *,
+.portrait-page *::before,
+.portrait-page *::after {
+  box-sizing: border-box;
+}
+
+.portrait-hud {
+  position: relative;
+  width: 720px;
+  height: 330px;
+  transform-origin: bottom left;
+  filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.78));
+}
+
+.portrait-hud.com-rolagem {
+  width: 980px;
+}
+
+/* As duas barras ficam atrás do retrato, como uma HUD de jogo. */
+.portrait-bars {
+  position: absolute;
+  left: 226px;
+  bottom: 33px;
+  z-index: 1;
+  width: 485px;
+  padding: 6px 7px;
+  display: grid;
+  gap: 5px;
+  background: rgba(7, 8, 12, 0.92);
+  border: 5px solid #171a22;
+  box-shadow:
+    inset 0 0 18px rgba(0, 0, 0, 0.85),
+    0 6px 15px rgba(0, 0, 0, 0.65);
+}
+
+.portrait-bar {
+  position: relative;
+  height: 54px;
+  overflow: hidden;
+  background: rgba(12, 13, 17, 0.97);
+  box-shadow:
+    inset 0 0 18px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.portrait-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background:
+    radial-gradient(circle at 20% 40%, transparent 0 5%, rgba(0, 0, 0, 0.55) 6% 7%, transparent 8%),
+    linear-gradient(110deg, transparent 0 28%, rgba(255, 255, 255, 0.11) 34%, transparent 41% 100%);
+  background-size: 145px 70px, 100% 100%;
+  mix-blend-mode: overlay;
+}
+
+.portrait-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 0;
+  transition: width 220ms ease-out;
+}
+
+.portrait-bar.vida .portrait-bar-fill {
+  background:
+    linear-gradient(180deg, rgba(255, 68, 76, 0.95), rgba(174, 0, 16, 0.98)),
+    #d00925;
+  box-shadow:
+    inset 0 0 18px rgba(255, 126, 126, 0.3),
+    0 0 18px rgba(225, 0, 28, 0.33);
+}
+
+.portrait-bar.sanidade .portrait-bar-fill {
+  background:
+    linear-gradient(180deg, rgba(46, 104, 255, 0.98), rgba(4, 44, 185, 0.98)),
+    #173ce6;
+  box-shadow:
+    inset 0 0 18px rgba(116, 159, 255, 0.28),
+    0 0 18px rgba(24, 64, 237, 0.34);
+}
+
+.portrait-bar-value {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 31px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 3px 2px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(255, 255, 255, 0.42);
+}
+
+.portrait-avatar-shell {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 4;
+  width: 310px;
+  height: 310px;
+  padding: 5px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fff2a9, #d4af37 43%, #60460d 88%);
+  box-shadow:
+    0 0 0 6px rgba(5, 5, 7, 0.95),
+    0 0 32px rgba(212, 175, 55, 0.2),
+    16px 16px 25px rgba(0, 0, 0, 0.75);
+}
+
+.portrait-avatar-shell::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.portrait-avatar,
+.portrait-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: radial-gradient(circle at 42% 28%, #292826, #080809 72%);
+  color: #d4af37;
+  font-size: 66px;
+  font-weight: 900;
+}
+
+.portrait-pe-badge {
+  position: absolute;
+  right: -5px;
+  bottom: 8px;
+  z-index: 6;
+  min-width: 87px;
+  height: 72px;
+  padding: 4px 12px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 52% 44% 56% 48%;
+  background:
+    radial-gradient(circle at center, rgba(4, 4, 5, 0.98) 0 45%, rgba(4, 4, 5, 0.88) 58%, transparent 74%);
+  color: #ffd400;
+  text-shadow: 0 0 9px #ffd400, 0 2px 3px #000;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.9));
+}
+
+.portrait-pe-badge strong {
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.portrait-pe-badge span {
+  align-self: flex-end;
+  margin-bottom: 12px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.portrait-roll {
+  --success-color: #ffd43b;
+  position: absolute;
+  left: 650px;
+  bottom: 28px;
+  z-index: 8;
+  width: 320px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  animation: portrait-roll-enter 180ms cubic-bezier(0.2, 0.94, 0.3, 1.12);
+}
+
+.portrait-roll-info {
+  position: absolute;
+  left: 0;
+  top: 54px;
+  z-index: 2;
+  width: 170px;
+  min-height: 116px;
+  padding: 13px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 2px solid var(--success-color);
+  border-right: 0;
+  border-radius: 13px 0 0 13px;
+  background: linear-gradient(105deg, rgba(5, 6, 8, 0.97), rgba(18, 18, 20, 0.92));
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--success-color) 52%, transparent),
+    inset 0 0 20px rgba(255, 255, 255, 0.025);
+}
+
+.portrait-roll-info span {
+  color: #c8c1b2;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.portrait-roll-info strong {
+  max-width: 140px;
+  margin: 3px 0 7px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portrait-roll-info em {
+  color: var(--success-color);
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.05;
+  text-shadow: 0 0 11px var(--success-color);
+  text-transform: uppercase;
+}
+
+.portrait-d20 {
+  position: relative;
+  z-index: 3;
+  width: 230px;
+  height: 230px;
+  display: grid;
+  place-items: center;
+  color: var(--success-color);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--success-color) 68%, transparent));
+}
+
+.portrait-d20 svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: #f7f7f7;
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.portrait-d20 .portrait-d20-face {
+  fill: rgba(2, 2, 4, 0.98);
+  stroke: var(--success-color);
+  stroke-width: 4;
+}
+
+.portrait-d20 polygon:not(.portrait-d20-face) {
+  fill: rgba(4, 4, 7, 0.76);
+}
+
+.portrait-d20 strong {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  font-size: 82px;
+  font-weight: 500;
+  letter-spacing: -0.07em;
+  text-shadow:
+    0 0 5px #fff,
+    0 0 12px var(--success-color),
+    0 0 24px var(--success-color),
+    0 4px 4px #000;
+}
+
+.portrait-page-error {
+  align-items: center;
+  justify-content: center;
+}
+
+.portrait-error-card {
+  padding: 16px 22px;
+  border: 1px solid #d4af37;
+  border-radius: 12px;
+  background: rgba(5, 5, 5, 0.92);
+  color: #f3d674;
+  font-weight: 700;
+}
+
+@keyframes portrait-roll-enter {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.86) rotate(3deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1) rotate(0);
+  }
+}
+
+@media (max-width: 1000px) {
+  .portrait-hud {
+    transform: scale(0.82);
+  }
+}
+
+@media (max-width: 760px) {
+  .portrait-page {
+    padding: 10px;
+  }
+
+  .portrait-hud {
+    transform: scale(0.62);
+  }
+}

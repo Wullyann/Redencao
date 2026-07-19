@@ -1,0 +1,16 @@
+ALTERAÇÃO 2 — AVATAR CLICÁVEL
+
+O que muda:
+- Remove a caixa grande de upload.
+- A bolinha do personagem passa a ser clicável.
+- A imagem é recortada e reduzida no navegador.
+- Não usa mais a ação antiga de upload que retornava "Ação inválida".
+- A imagem é salva junto com o botão "Salvar Ficha".
+
+INSTALAÇÃO
+1. Copie a pasta "src" deste pacote.
+2. Cole dentro de:
+   C:\Users\BACK\OneDrive\Área de Trabalho\site-RPG
+3. Confirme "Substituir os arquivos no destino".
+4. Com npm run dev aberto, volte ao navegador e pressione Ctrl + F5.
+5. Clique na bolinha do personagem, escolha a imagem e depois clique em "Salvar Ficha".

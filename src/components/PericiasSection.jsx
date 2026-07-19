@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { FaDiceD20 } from "react-icons/fa";
+import { publicarRolagemPortrait } from "../utils/portraitRealtime";
 
 // 1) Copie a mesma BASE_URL que usa em FichaJogador.jsx:
 const BASE_URL =
@@ -251,6 +252,15 @@ export default function PericiasSection({
     const roll = Math.floor(Math.random() * 20) + 1;
     const category = categorize(roll, pool, sor);
     setRollData({ nome, roll, category });
+
+    // O Portrait recebe a rolagem antes de qualquer requisição à planilha.
+    publicarRolagemPortrait({
+      fichaId,
+      tipo: "Perícia",
+      nome,
+      valor: roll,
+      tipoSucesso: category,
+    });
 
     // 1) Atualiza estado local de histórico (via registrarRolagem, se presente)
     if (registrarRolagem) {

@@ -59,102 +59,214 @@ const defaultForm = () => ({
   peCost:       '',
 });
 
+const createLocalId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const createSheetId = fichaId => `${String(fichaId)}::hab::${createLocalId()}`;
+
 export default function HabilidadesSection({ fichaId, initialSkills = [], onSave, onRemove }) {
   const [skills, setSkills]         = useState(initialSkills);
   const [filter, setFilter]         = useState('');
   const [isAdding, setIsAdding]     = useState(false);
   const [form, setForm]             = useState(defaultForm());
   const [editingIdx, setEditingIdx] = useState(null);
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState('');
+
+  const normalizeRow = (row, index) => {
+    const sheetId = String(row["ID da Ficha"] ?? fichaId ?? '');
+    const name = row["Nome da Habilidade"] || '';
+
+    return {
+      name,
+      description:  row["Descrição"]      || '',
+      element:      row["Elemento"]       || '',
+      prerequisite: row["Pré-requisito"] || '',
+      peCost:       row["Custo (PE)"]     || '',
+      _sheetId: sheetId,
+      _uid: sheetId.includes('::hab::')
+        ? sheetId
+        : `legacy-${sheetId}-${name}-${index}`,
+    };
+  };
+
+  const loadSkills = async () => {
+    if (!fichaId) return;
+
+    const response = await fetch(`${BASE_URL}?sheet=Habilidades`);
+    if (!response.ok) throw new Error('Não foi possível carregar as habilidades.');
+
+    const data = await response.json();
+    const fichaKey = String(fichaId);
+    const rows = data.filter(row => {
+      const rowId = String(row["ID da Ficha"] ?? '');
+      return rowId === fichaKey || rowId.startsWith(`${fichaKey}::hab::`);
+    });
+
+    setSkills(rows.map(normalizeRow));
+  };
 
   useEffect(() => {
-    if (!fichaId) return;
-    fetch(`${BASE_URL}?sheet=Habilidades`)
-      .then(r => r.json())
-      .then(data => {
-        const rows = data.filter(r => String(r["ID da Ficha"]) === String(fichaId));
-        setSkills(rows.map(r => ({
-          name:         r["Nome da Habilidade"] || '',
-          description:  r["Descrição"]           || '',
-          element:      r["Elemento"]            || '',
-          prerequisite: r["Pré-requisito"]       || '',
-          peCost:       r["Custo (PE)"]          || '',
-        })));
-      })
-      .catch(console.error);
+    loadSkills().catch(err => {
+      console.error(err);
+      setError(err.message);
+    });
   }, [fichaId]);
 
+  const parseResponse = async response => {
+    if (!response.ok) {
+      throw new Error(`Erro ao comunicar com a planilha (${response.status}).`);
+    }
+
+    const text = await response.text();
+    if (!text) return;
+
+    try {
+      const data = JSON.parse(text);
+      if (data.status === 'erro' || data.status === 'error') {
+        throw new Error(data.mensagem || data.message || 'A planilha recusou a alteração.');
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) return;
+      throw err;
+    }
+  };
+
   const saveToSheet = async entry => {
-    const form = new URLSearchParams();
-    form.append("acao", "salvarHabilidade");
-    form.append("sheet", "Habilidades");
-    form.append("ID da Ficha", entry["ID da Ficha"]);
-    form.append("Nome da Habilidade", entry.name);
-    form.append("Descrição", entry.description);
-    form.append("Elemento", entry.element);
-    form.append("Pré-requisito", entry.prerequisite);
-    form.append("Custo (PE)", entry.peCost);
-    await fetch(BASE_URL, { method: "POST", body: form });
+    const body = new FormData();
+    body.append('acao', 'salvarHabilidade');
+    body.append('sheet', 'Habilidades');
+    body.append('ID da Ficha', entry._sheetId);
+    body.append('Nome da Habilidade', entry.name);
+    body.append('Descrição', entry.description);
+    body.append('Elemento', entry.element);
+    body.append('Pré-requisito', entry.prerequisite);
+    body.append('Custo (PE)', entry.peCost);
+
+    const response = await fetch(BASE_URL, { method: 'POST', body });
+    await parseResponse(response);
   };
 
   const deleteFromSheet = async entry => {
-    const form = new URLSearchParams();
-    form.append("acao", "deletarHabilidade");
-    form.append("sheet", "Habilidades");
-    form.append("ID da Ficha", fichaId);
-    form.append("Nome da Habilidade", entry.name);
-    await fetch(BASE_URL, { method: "POST", body: form });
+    const body = new FormData();
+    body.append('acao', 'deletarHabilidade');
+    body.append('sheet', 'Habilidades');
+    body.append('ID da Ficha', entry._sheetId || fichaId);
+    body.append('Nome da Habilidade', entry.name);
+
+    const response = await fetch(BASE_URL, { method: 'POST', body });
+    await parseResponse(response);
   };
-
-  const handleSave = async () => {
-  if (!fichaId) {
-    ;
-  }
-
-  if (editingIdx !== null) {
-    await deleteFromSheet(skills[editingIdx]);
-  }
-
-  const finalData = {
-    ...form,
-    "ID da Ficha": fichaId
-  };
-
-  await saveToSheet(finalData);
-
-  const newList = editingIdx !== null
-    ? skills.map((s, i) => i === editingIdx ? form : s)
-    : [...skills, form];
-
-  setSkills(newList);
-  onSave?.(newList);
-  cancelEdit();
-};
-
 
   const cancelEdit = () => {
     setForm(defaultForm());
     setIsAdding(false);
     setEditingIdx(null);
+    setError('');
+  };
+
+  const handleSave = async () => {
+    const name = form.name.trim();
+    const description = form.description.trim();
+
+    if (!fichaId) {
+      setError('A ficha ainda não possui um ID válido.');
+      return;
+    }
+    if (!name) {
+      setError('Digite o nome da habilidade.');
+      return;
+    }
+    if (!description) {
+      setError('Digite a descrição da habilidade.');
+      return;
+    }
+
+    const current = editingIdx !== null ? skills[editingIdx] : null;
+    const sheetId = current?._sheetId?.includes('::hab::')
+      ? current._sheetId
+      : createSheetId(fichaId);
+
+    const finalData = {
+      ...form,
+      name,
+      description,
+      _sheetId: sheetId,
+      _uid: current?._uid || sheetId,
+    };
+
+    setSaving(true);
+    setError('');
+
+    try {
+      // Na edição, remove o registro anterior antes de recriá-lo. Isso também
+      // migra habilidades antigas, que compartilhavam apenas o ID da ficha,
+      // para um identificador exclusivo e impede substituições acidentais.
+      if (current) {
+        await deleteFromSheet(current);
+      }
+
+      await saveToSheet(finalData);
+
+      const newList = current
+        ? skills.map((skill, index) => index === editingIdx ? finalData : skill)
+        : [...skills, finalData];
+
+      setSkills(newList);
+      onSave?.(newList);
+      cancelEdit();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Não foi possível salvar a habilidade.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const startEdit = idx => {
+    const skill = skills[idx];
+    if (!skill) return;
+
     setEditingIdx(idx);
-    setForm({ ...skills[idx], "ID da Ficha": fichaId });
+    setForm({
+      name: skill.name,
+      description: skill.description,
+      element: skill.element,
+      prerequisite: skill.prerequisite,
+      peCost: skill.peCost,
+    });
+    setError('');
     setIsAdding(true);
   };
 
   const removeSkill = async idx => {
     const entry = skills[idx];
-    if (!entry) return;
-    await deleteFromSheet(entry);
-    const newList = skills.filter((_, i) => i !== idx);
-    setSkills(newList);
-    onRemove?.(newList);
+    if (!entry || saving) return;
+
+    setSaving(true);
+    setError('');
+    try {
+      await deleteFromSheet(entry);
+      const newList = skills.filter((_, index) => index !== idx);
+      setSkills(newList);
+      onRemove?.(newList);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Não foi possível remover a habilidade.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const filtered = skills.filter(s =>
-    s.name.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filtered = skills
+    .map((skill, originalIdx) => ({ skill, originalIdx }))
+    .filter(({ skill }) =>
+      skill.name.toLowerCase().includes(filter.toLowerCase())
+    );
 
   return (
     <div style={styles.container}>
@@ -232,19 +344,24 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
             </div>
           </div>
           <div style={styles.actions}>
-            <button style={styles.btnSave} onClick={handleSave}>Salvar</button>
-            <button style={styles.btnCancel} onClick={cancelEdit}>Cancelar</button>
+            <button style={styles.btnSave} onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+            <button style={styles.btnCancel} onClick={cancelEdit} disabled={saving}>Cancelar</button>
           </div>
+          {error && <p style={styles.errorText}>{error}</p>}
         </div>
       )}
 
+      {!isAdding && error && <p style={styles.errorText}>{error}</p>}
+
       {/* lista de habilidades */}
-      {filtered.map((h, idx) => (
+      {filtered.map(({ skill, originalIdx }) => (
         <SkillCard
-          key={idx}
-          skill={h}
-          onEdit={() => startEdit(idx)}
-          onRemove={() => removeSkill(idx)}
+          key={skill._uid}
+          skill={skill}
+          onEdit={() => startEdit(originalIdx)}
+          onRemove={() => removeSkill(originalIdx)}
         />
       ))}
     </div>
@@ -318,6 +435,11 @@ const styles = {
     padding: '6px 12px',
     cursor: 'pointer',
     color: '#000',
+  },
+  errorText: {
+    color: '#ff6b6b',
+    margin: '10px 0 0',
+    fontSize: 14,
   },
   formBox: {
     background: '#000',

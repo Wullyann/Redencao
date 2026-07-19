@@ -7,6 +7,7 @@ import FichaJogador from './pages/FichaJogador';
 import EscudoDoMestre from "./pages/EscudoDoMestre";
 import CriarFicha from './pages/CriarFicha';
 import Fichas from './pages/Fichas';
+import Portrait from './pages/Portrait';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/criar-ficha" element={<CriarFicha />} />
       <Route path="/fichas" element={<Fichas />} />
       <Route path="/escudo" element={<EscudoDoMestre />} />
+      <Route path="/portrait/:id" element={<Portrait />} />
       {/* adicione outras rotas aqui */}
     </Routes>
   );

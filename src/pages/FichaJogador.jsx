@@ -8,7 +8,6 @@ import PericiasSection from "../components/PericiasSection";
 import RituaisSection from "../components/RituaisSection";
 import CombatEntryForm from "../components/CombatEntryForm";
 import HabilidadesSection from "../components/HabilidadesSection";
-import UploadImagem from "../components/UploadImagem";
 import RolagensSection from "../components/RolagensSection";
 import {
   getNivel,
@@ -19,6 +18,12 @@ import {
   getSAN,
 } from "../utils/calculosPorClasse";
 import { useSearchParams } from "react-router-dom";
+import {
+  conectarCanalPortraitRemoto,
+  obterTokenPortrait,
+  publicarRolagemPortrait,
+  publicarStatusPortrait,
+} from "../utils/portraitRealtime";
 
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
@@ -80,6 +85,7 @@ export default function FichaJogador() {
   const [rollAttr, setRollAttr] = useState(null);
   const [historicoRolagens, setHistoricoRolagens] = useState([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [statusAlterado, setStatusAlterado] = useState(false);
   const [imagemUrl, setImagemUrl] = useState("");
 
 
@@ -182,7 +188,72 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSA
     };
     window.addEventListener("unload", handleUnload);
     return () => window.removeEventListener("unload", handleUnload);
-  }, [ficha, bonusManual, pvAtual, peAtual, sanAtual, hasChanges]);
+  }, [
+    ficha,
+    imagemUrl,
+    bonusManual,
+    pvAtual,
+    peAtual,
+    sanAtual,
+    pvMax,
+    peMax,
+    sanMax,
+    hasChanges,
+  ]);
+
+  // Mantém uma conexão direta com o Portrait, inclusive quando ele está no OBS.
+  useEffect(() => {
+    if (!ficha?.ID) return undefined;
+    const token = obterTokenPortrait(ficha.ID);
+    return conectarCanalPortraitRemoto({ fichaId: ficha.ID, token });
+  }, [ficha?.ID]);
+
+  // Entrega os status imediatamente ao Portrait.
+  useEffect(() => {
+    if (!ficha?.ID) return;
+
+    publicarStatusPortrait({
+      fichaId: ficha.ID,
+      pvAtual,
+      pvMax,
+      sanAtual,
+      sanMax,
+      peAtual,
+      peMax,
+    });
+  }, [ficha?.ID, pvAtual, pvMax, sanAtual, sanMax, peAtual, peMax]);
+
+  // Mantém a planilha atualizada como segurança e para outras máquinas.
+  useEffect(() => {
+    if (!statusAlterado || !ficha?.ID) return undefined;
+
+    const timer = window.setTimeout(() => {
+      const formData = new URLSearchParams();
+      formData.append("acao", "salvarFicha");
+      formData.append("ID", ficha.ID);
+      formData.append("PV Atual", pvAtual);
+      formData.append("PE Atual", peAtual);
+      formData.append("Sanidade Atual", sanAtual);
+      formData.append("PV Máx.", pvMax);
+      formData.append("PE Máx.", peMax);
+      formData.append("Sanidade Máx.", sanMax);
+
+      fetch(BASE_URL, { method: "POST", body: formData }).catch((error) => {
+        console.error("Erro ao sincronizar status com o Portrait:", error);
+      });
+    }, 650);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    statusAlterado,
+    ficha?.ID,
+    pvAtual,
+    peAtual,
+    sanAtual,
+    pvMax,
+    peMax,
+    sanMax,
+  ]);
 
 if (!ficha) {
   return <div style={{ color: "#fff" }}>Carregando ficha...</div>;
@@ -271,7 +342,16 @@ const rolarAttr = (nome, valor) => {
     ...prev,
   ]);
 
-  // Salva na planilha
+  // Envia ao Portrait no mesmo instante em que o popup local aparece.
+  publicarRolagemPortrait({
+    fichaId: ficha.ID,
+    tipo: "Atributo",
+    nome,
+    valor: roll,
+    tipoSucesso: category,
+  });
+
+  // A planilha continua apenas como histórico e fallback.
   fetch(BASE_URL, {
     method: "POST",
     body: new URLSearchParams({
@@ -296,6 +376,7 @@ const rolarAttr = (nome, valor) => {
     const formData = new URLSearchParams();
     formData.append("acao", "salvarFicha");
     formData.append("ID", ficha.ID);
+    formData.append("Imagem do Personagem", imagemUrl);
     formData.append("Classe", ficha.Classe);
     formData.append("PV Atual", pvAtual);
     formData.append("PE Atual", peAtual);
@@ -308,7 +389,35 @@ const rolarAttr = (nome, valor) => {
       formData.append(`Bonus_${nome}`, valor);
     });
     try {
-      await fetch(BASE_URL, { method: "POST", body: formData });
+      const response = await fetch(BASE_URL, { method: "POST", body: formData });
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`Servidor respondeu com erro ${response.status}.`);
+      }
+
+      let resultado = null;
+      try {
+        resultado = JSON.parse(responseText);
+      } catch {
+        // Algumas versões do Apps Script respondem apenas texto.
+      }
+
+      const mensagemServidor = String(
+        resultado?.message || resultado?.mensagem || responseText || ""
+      ).toLowerCase();
+
+      if (
+        resultado?.status === "erro" ||
+        resultado?.status === "error" ||
+        mensagemServidor.includes("ação inválida") ||
+        mensagemServidor.includes("acao invalida")
+      ) {
+        throw new Error(
+          resultado?.message || resultado?.mensagem || responseText || "O servidor recusou o salvamento."
+        );
+      }
+
       alert("Ficha salva com sucesso!");
       setHasChanges(false);
     } catch (err) {
@@ -336,28 +445,20 @@ const rolarAttr = (nome, valor) => {
       >
         {/* Lateral: Header e Vital Stats */}
         <div style={{ flex: "1 1 300px" }}>
-          {/*<UploadImagem onUploadComplete={(url) => {
-  setImagemUrl(url);
-  setHasChanges(true);
-}} />{imagemUrl && (
-  <div style={{ marginTop: 12 }}>
-    <img
-      src={imagemUrl}
-      alt="Imagem do personagem"
-      style={{
-        maxWidth: "100%",
-        borderRadius: 8,
-        border: "1px solid #D4AF37",
-      }}
-    />
-  </div>
-)}*/}
-
           <CharacterHeader
-              ficha={ficha}
-  onClasseChange={newClass => {
-    setHasChanges(true);
-    setFicha({ ...ficha, Classe: newClass });
+            ficha={ficha}
+            imagemUrl={imagemUrl}
+            onImagemChange={(novaImagem) => {
+              setImagemUrl(novaImagem);
+              setFicha((fichaAtual) => ({
+                ...fichaAtual,
+                ["Imagem do Personagem"]: novaImagem,
+              }));
+              setHasChanges(true);
+            }}
+            onClasseChange={(newClass) => {
+              setHasChanges(true);
+              setFicha({ ...ficha, Classe: newClass });
             }}
           />
           <VitalStatsSection
@@ -367,9 +468,9 @@ const rolarAttr = (nome, valor) => {
             peMax={peMax}
             sanAtual={sanAtual}
             sanMax={sanMax}
-            setPvAtual={(v) => { setHasChanges(true); setPvAtual(v); }}
-            setPeAtual={(v) => { setHasChanges(true); setPeAtual(v); }}
-            setSanAtual={(v) => { setHasChanges(true); setSanAtual(v); }}
+            setPvAtual={(v) => { setHasChanges(true); setStatusAlterado(true); setPvAtual(v); }}
+            setPeAtual={(v) => { setHasChanges(true); setStatusAlterado(true); setPeAtual(v); }}
+            setSanAtual={(v) => { setHasChanges(true); setStatusAlterado(true); setSanAtual(v); }}
             agi={atributosNum.AGI}
             vig={atributosNum.VIG}
             fichaId={ficha.ID}
