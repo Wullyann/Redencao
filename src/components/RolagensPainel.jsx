@@ -1,119 +1,90 @@
 import React from "react";
+import { Clock3, Dices } from "lucide-react";
 
-const categoryStyles = {
-  Desastre: { color: "#DC143C", textShadow: "0 0 8px #DC143C" },
-  Fracasso: { color: "#8B0000", textShadow: "0 0 6px #8B0000" },
-  Sucesso: {
-    color: "#00FF00",
-    textShadow: "0 0 12px #00FF00",
-    fontWeight: "bold",
-  },
-  "Sucesso Bom": {
-    color: "#00FFFF",
-    textShadow: "0 0 12px #00FFFF",
-    fontWeight: "bold",
-  },
-  "Sucesso Extremo": {
-    color: "#FFFFFF",
-    textShadow: "0 0 12px #FFFFFF",
-    fontWeight: "bold",
-  },
-  "Sucesso Perfeito": {
-    color: "#FFD700",
-    textShadow: "0 0 12px #FFD700",
-    fontWeight: "bold",
-  },
+const resultadoClasses = {
+  Desastre: "roll-result--desastre",
+  Fracasso: "roll-result--fracasso",
+  Sucesso: "roll-result--sucesso",
+  "Sucesso Bom": "roll-result--bom",
+  "Sucesso Extremo": "roll-result--extremo",
+  "Sucesso Perfeito": "roll-result--perfeito",
 };
 
 function formatarHorario(valor) {
   if (!valor) return "—";
+
   try {
-    const date = new Date(valor);
-    if (isNaN(date)) return valor;
-    const horas = String(date.getHours()).padStart(2, "0");
-    const minutos = String(date.getMinutes()).padStart(2, "0");
-    const segundos = String(date.getSeconds()).padStart(2, "0");
-    return `${horas}:${minutos}:${segundos}`;
+    const data = new Date(valor);
+    if (Number.isNaN(data.getTime())) return String(valor);
+
+    return data.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   } catch {
-    return valor;
+    return String(valor);
   }
 }
 
-export default function RolagensPainel({ rolagens }) {
+export default function RolagensPainel({ rolagens = [] }) {
+  const recentes = rolagens.slice().reverse().slice(0, 30);
+
   return (
-    <div
-      style={{
-        background: "#111",
-        border: "1px solid #D4AF37",
-        borderRadius: 12,
-        padding: 16,
-        height: "100%",
-        overflowY: "auto",
-        boxShadow: "0 0 6px #D4AF37",
-        boxSizing: "border-box",
-      }}
-    >
-      <h2
-        style={{
-          fontSize: 20,
-          fontWeight: "bold",
-          marginBottom: 16,
-          borderBottom: "1px solid #D4AF37",
-          paddingBottom: 8,
-          color: "#D4AF37",
-        }}
-      >
-        🎲 Rolagens Recentes
-      </h2>
+    <section className="master-rolls">
+      <header className="master-rolls__header">
+        <div>
+          <span className="master-rolls__icon"><Dices size={20} /></span>
+          <div>
+            <p>HISTÓRICO</p>
+            <h2>Rolagens recentes</h2>
+          </div>
+        </div>
+        <span className="master-rolls__count">{recentes.length}</span>
+      </header>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {rolagens
-          .slice()
-          .reverse()
-          .map((r, idx) => (
-            <div
-              key={idx}
-              style={{
-                background: "#222",
-                border: "1px solid #555",
-                borderRadius: 8,
-                padding: 10,
-                fontSize: 13,
-                color: "#D4AF37",
-                boxSizing: "border-box",
-              }}
-            >
-              <div style={{ fontWeight: "bold" }}>
-                {r["Nome do Personagem"] || "—"}
-              </div>
+      <div className="master-rolls__list">
+        {recentes.length ? (
+          recentes.map((rolagem, index) => {
+            const resultado = rolagem["Tipo de Sucesso"] || "—";
+            const classeResultado = resultadoClasses[resultado] || "roll-result--neutro";
+            const horario = rolagem.Horário || rolagem.Horario;
 
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "#999",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
+            return (
+              <article
+                className={`master-roll${index === 0 ? " master-roll--latest" : ""}`}
+                key={rolagem.ID || `${horario || "rolagem"}-${index}`}
               >
-                🕒 {formatarHorario(r.Horário)}
-              </div>
+                <div className="master-roll__value" aria-label={`Resultado ${rolagem.Valor || 0}`}>
+                  <Dices size={14} />
+                  <strong>{rolagem.Valor ?? "—"}</strong>
+                </div>
 
-              <div style={{ marginTop: 4 }}>
-                <strong>Tipo:</strong> {r.Tipo} | <strong>Nome:</strong> {r.Nome}
-              </div>
-              <div>
-                <strong>Valor:</strong> {r.Valor}
-              </div>
-              <div>
-                <strong>Resultado:</strong>{" "}
-                <span style={categoryStyles[r["Tipo de Sucesso"]] || {}}>
-                  {r["Tipo de Sucesso"] || "—"}
-                </span>
-              </div>
-            </div>
-          ))}
+                <div className="master-roll__content">
+                  <div className="master-roll__topline">
+                    <strong>{rolagem["Nome do Personagem"] || "Personagem"}</strong>
+                    <span><Clock3 size={11} /> {formatarHorario(horario)}</span>
+                  </div>
+
+                  <div className="master-roll__description">
+                    <span>{rolagem.Tipo || "Rolagem"}</span>
+                    <b>•</b>
+                    <strong>{rolagem.Nome || "Sem nome"}</strong>
+                  </div>
+
+                  <span className={`master-roll__result ${classeResultado}`}>{resultado}</span>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className="master-rolls__empty">
+            <Dices size={30} />
+            <strong>Nenhuma rolagem ainda</strong>
+            <span>Os resultados da sessão aparecerão aqui.</span>
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 }
