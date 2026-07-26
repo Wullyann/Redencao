@@ -59,22 +59,70 @@ const defaultForm = () => ({
   peCost:       '',
 });
 
-const createLocalId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
+const CACHE_PREFIX = 'redencao:habilidades:';
+
+const getCacheKey = fichaId => `${CACHE_PREFIX}${String(fichaId || '')}`;
+
+const readSkillsCache = fichaId => {
+  if (!fichaId || typeof window === 'undefined') return [];
+  try {
+    const cached = JSON.parse(localStorage.getItem(getCacheKey(fichaId)) || '[]');
+    return Array.isArray(cached) ? cached : [];
+  } catch {
+    return [];
   }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const createSheetId = fichaId => `${String(fichaId)}::hab::${createLocalId()}`;
+const writeSkillsCache = (fichaId, skills) => {
+  if (!fichaId || typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(getCacheKey(fichaId), JSON.stringify(skills));
+  } catch {
+    // O cache é apenas uma aceleração; falhar aqui não impede o salvamento.
+  }
+};
+
+const belongsToFicha = (rowId, fichaId) => {
+  const base = String(fichaId ?? '');
+  const value = String(rowId ?? '');
+  if (!base || !value) return false;
+
+  return value === base || value.startsWith(`${base}::hab::`) || (
+    value.startsWith(base) &&
+    value.length === base.length + 3 &&
+    /^\d+$/.test(value)
+  );
+};
+
+// O Apps Script antigo trata "ID da Ficha" como chave única ao salvar.
+// Para não substituir outra habilidade, cada registro recebe um ID numérico
+// composto pelo ID da ficha + um sufixo de três dígitos. Ele continua sendo
+// reconhecido como pertencente ao personagem, mas é único para a planilha.
+const createSheetId = (fichaId, skills) => {
+  const base = String(fichaId);
+  const used = new Set(skills.map(skill => String(skill._sheetId || '')));
+  const seed = Date.now() % 1000;
+
+  for (let offset = 0; offset < 1000; offset += 1) {
+    const suffix = String((seed + offset) % 1000).padStart(3, '0');
+    const candidate = `${base}${suffix}`;
+    if (!used.has(candidate)) return candidate;
+  }
+
+  throw new Error('Limite de habilidades atingido para esta ficha.');
+};
 
 export default function HabilidadesSection({ fichaId, initialSkills = [], onSave, onRemove }) {
-  const [skills, setSkills]         = useState(initialSkills);
+  const [skills, setSkills] = useState(() => {
+    const cached = readSkillsCache(fichaId);
+    return cached.length ? cached : initialSkills;
+  });
   const [filter, setFilter]         = useState('');
   const [isAdding, setIsAdding]     = useState(false);
   const [form, setForm]             = useState(defaultForm());
   const [editingIdx, setEditingIdx] = useState(null);
   const [saving, setSaving]         = useState(false);
+  const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
 
   const normalizeRow = (row, index) => {
@@ -88,7 +136,7 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
       prerequisite: row["Pré-requisito"] || '',
       peCost:       row["Custo (PE)"]     || '',
       _sheetId: sheetId,
-      _uid: sheetId.includes('::hab::')
+      _uid: sheetId !== String(fichaId)
         ? sheetId
         : `legacy-${sheetId}-${name}-${index}`,
     };
@@ -102,20 +150,32 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
 
     const data = await response.json();
     const fichaKey = String(fichaId);
-    const rows = data.filter(row => {
-      const rowId = String(row["ID da Ficha"] ?? '');
-      return rowId === fichaKey || rowId.startsWith(`${fichaKey}::hab::`);
-    });
-
-    setSkills(rows.map(normalizeRow));
+    const rows = data.filter(row => belongsToFicha(row["ID da Ficha"], fichaKey));
+    const normalized = rows.map(normalizeRow);
+    setSkills(normalized);
+    writeSkillsCache(fichaId, normalized);
   };
 
   useEffect(() => {
-    loadSkills().catch(err => {
-      console.error(err);
-      setError(err.message);
-    });
+    if (!fichaId) return undefined;
+
+    const cached = readSkillsCache(fichaId);
+    if (cached.length) setSkills(cached);
+    setLoading(true);
+
+    loadSkills()
+      .catch(err => {
+        console.error(err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+
+    return undefined;
   }, [fichaId]);
+
+  useEffect(() => {
+    writeSkillsCache(fichaId, skills);
+  }, [fichaId, skills]);
 
   const parseResponse = async response => {
     if (!response.ok) {
@@ -141,6 +201,8 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
     body.append('acao', 'salvarHabilidade');
     body.append('sheet', 'Habilidades');
     body.append('ID da Ficha', entry._sheetId);
+    body.append('ID original da Ficha', String(fichaId));
+    body.append('modo', entry._isNew ? 'criar' : 'editar');
     body.append('Nome da Habilidade', entry.name);
     body.append('Descrição', entry.description);
     body.append('Elemento', entry.element);
@@ -187,9 +249,11 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
     }
 
     const current = editingIdx !== null ? skills[editingIdx] : null;
-    const sheetId = current?._sheetId?.includes('::hab::')
-      ? current._sheetId
-      : createSheetId(fichaId);
+    const currentId = String(current?._sheetId || '');
+    const currentHasUniqueId = currentId && currentId !== String(fichaId);
+    const sheetId = currentHasUniqueId
+      ? currentId
+      : createSheetId(fichaId, skills);
 
     const finalData = {
       ...form,
@@ -197,26 +261,30 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
       description,
       _sheetId: sheetId,
       _uid: current?._uid || sheetId,
+      _isNew: !current,
     };
 
     setSaving(true);
     setError('');
 
     try {
-      // Na edição, remove o registro anterior antes de recriá-lo. Isso também
-      // migra habilidades antigas, que compartilhavam apenas o ID da ficha,
-      // para um identificador exclusivo e impede substituições acidentais.
-      if (current) {
+      // Primeiro grava o registro novo/atualizado. Habilidades antigas usam o
+      // mesmo ID da ficha; nesses casos a gravação migra para um ID exclusivo
+      // e só depois o registro antigo é removido, evitando perda de dados.
+      await saveToSheet(finalData);
+
+      if (current && String(current._sheetId) !== String(finalData._sheetId)) {
         await deleteFromSheet(current);
       }
 
-      await saveToSheet(finalData);
-
+      const savedData = { ...finalData };
+      delete savedData._isNew;
       const newList = current
-        ? skills.map((skill, index) => index === editingIdx ? finalData : skill)
-        : [...skills, finalData];
+        ? skills.map((skill, index) => index === editingIdx ? savedData : skill)
+        : [...skills, savedData];
 
       setSkills(newList);
+      writeSkillsCache(fichaId, newList);
       onSave?.(newList);
       cancelEdit();
     } catch (err) {
@@ -253,6 +321,7 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
       await deleteFromSheet(entry);
       const newList = skills.filter((_, index) => index !== idx);
       setSkills(newList);
+      writeSkillsCache(fichaId, newList);
       onRemove?.(newList);
     } catch (err) {
       console.error(err);
@@ -354,6 +423,9 @@ export default function HabilidadesSection({ fichaId, initialSkills = [], onSave
       )}
 
       {!isAdding && error && <p style={styles.errorText}>{error}</p>}
+      {loading && skills.length === 0 && (
+        <p style={styles.loadingText}>Carregando habilidades em segundo plano...</p>
+      )}
 
       {/* lista de habilidades */}
       {filtered.map(({ skill, originalIdx }) => (
@@ -439,6 +511,11 @@ const styles = {
   errorText: {
     color: '#ff6b6b',
     margin: '10px 0 0',
+    fontSize: 14,
+  },
+  loadingText: {
+    color: '#8f8a7d',
+    margin: '10px 0',
     fontSize: 14,
   },
   formBox: {

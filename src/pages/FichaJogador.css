@@ -1094,3 +1094,12 @@
   .play-module-icon { width: 30px; height: 30px; }
   .play-roll-toast { left: 8px; right: 8px; bottom: 8px; min-width: 0; }
 }
+
+/* Os módulos ficam montados para carregar em segundo plano, mas apenas o ativo aparece. */
+.play-module-view[hidden] {
+  display: none !important;
+}
+
+.play-module-view {
+  min-width: 0;
+}

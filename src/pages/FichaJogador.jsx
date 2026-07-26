@@ -464,8 +464,8 @@ export default function FichaJogador() {
     navigate("/");
   };
 
-  const renderModule = () => {
-    switch (activeModule) {
+  const renderModule = (moduleId) => {
+    switch (moduleId) {
       case "Habilidades":
         return (
           <HabilidadesSection
@@ -693,7 +693,18 @@ export default function FichaJogador() {
                   <small>{activeModuleData.subtitle}</small>
                 </div>
               </div>
-              <div className="play-module-body">{renderModule()}</div>
+              <div className="play-module-body">
+                {MODULES.map((module) => (
+                  <div
+                    key={module.id}
+                    className="play-module-view"
+                    hidden={activeModule !== module.id}
+                    aria-hidden={activeModule !== module.id}
+                  >
+                    {renderModule(module.id)}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
