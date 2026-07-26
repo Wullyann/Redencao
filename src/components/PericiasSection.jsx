@@ -1,10 +1,8 @@
-// src/components/PericiasSection.jsx
-
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { ChevronDown, Dices, Search, SlidersHorizontal, X } from "lucide-react";
 import { FaDiceD20 } from "react-icons/fa";
 import { publicarRolagemPortrait } from "../utils/portraitRealtime";
 
-// 1) Copie a mesma BASE_URL que usa em FichaJogador.jsx:
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
 
@@ -40,155 +38,13 @@ const LISTA_PERICIAS = [
 
 const TODOS_ATRIBUTOS = ["AGI", "FOR", "INT", "PRE", "VIG", "SOR"];
 
-const styles = {
-  container: {
-    marginTop: 24,
-    background: "#111111",
-    border: "1px solid #D4AF37",
-    borderRadius: 8,
-    padding: 16,
-    position: "relative",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#D4AF37",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: "#000000",
-    border: "1px solid #D4AF37",
-  },
-  th: {
-    border: "1px solid #D4AF37",
-    borderRight: "none",
-    padding: "8px",
-    color: "#D4AF37",
-    fontSize: 14,
-    textAlign: "center",
-    verticalAlign: "middle",
-    background: "#111111",
-  },
-  thLast: {
-    border: "none",
-    padding: "8px",
-  },
-  td: {
-    border: "1px solid #D4AF37",
-    borderRight: "none",
-    padding: "6px",
-    color: "#B2955D",
-    fontSize: 14,
-    textAlign: "center",
-    verticalAlign: "middle",
-  },
-  tdLast: {
-    border: "none",
-    padding: "6px",
-  },
-  select: {
-    width: "100%",
-    padding: 4,
-    background: "#000000",
-    color: "#D4AF37",
-    border: "1px solid #D4AF37",
-    borderRadius: 4,
-  },
-  input: {
-    width: "100%",
-    padding: 4,
-    background: "transparent",
-    color: "#D4AF37",
-    border: "none",
-    textAlign: "center",
-    fontSize: 14,
-  },
-  rollBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#D4AF37",
-    cursor: "pointer",
-    fontSize: 20,
-    lineHeight: 1,
-  },
-  summary: {
-    marginTop: 12,
-    color: "#B2955D",
-    fontSize: 14,
-    textAlign: "right",
-  },
-  resultCard: {
-    position: "fixed",
-    right: 20,
-    bottom: 20,
-    background: "#1a202c",
-    border: "1px solid #D4AF37",
-    borderRadius: 8,
-    padding: "12px 16px",
-    paddingRight: 36,
-    minWidth: 140,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    color: "#D4AF37",
-    zIndex: 1000,
-  },
-  closeBtn: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    background: "transparent",
-    border: "none",
-    color: "#D4AF37",
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  resultIcon: { fontSize: 32 },
-  resultText: {
-    display: "flex",
-    flexDirection: "column",
-    lineHeight: 1.2,
-  },
-  resultName: { fontWeight: "bold", fontSize: 16 },
-  resultRoll: { fontSize: 14, color: "#B2955D" },
-  resultCategory: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 4,
-  },
-};
-
 const categoryStyles = {
-  Desastre: {
-    color: "#DC143C",
-    textShadow: "0 0 16px #DC143C, 0 0 24px #FF0000",
-  },
-  Fracasso: {
-    color: "#8B0000",
-    textShadow: "0 0 6px #8B0000",
-  },
-  Sucesso: {
-    color: "#00FF00",
-    textShadow: "0 0 12px #00FF00",
-    fontSize: "20px",
-  },
-  "Sucesso Bom": {
-    color: "#00FFFF",
-    textShadow: "0 0 12px #00FFFF",
-    fontSize: "18px",
-  },
-  "Sucesso Extremo": {
-    color: "#FFFFFF",
-    textShadow: "0 0 8px #00FFFF",
-    fontSize: "18px",
-  },
-  "Sucesso Perfeito": {
-    color: "#FFD700",
-    textShadow: "0 0 8px #FFD700",
-    fontSize: "22px",
-  },
+  Desastre: { color: "#ff3b5c", textShadow: "0 0 18px rgba(255,59,92,.75)" },
+  Fracasso: { color: "#ff6b6b", textShadow: "0 0 12px rgba(255,107,107,.35)" },
+  Sucesso: { color: "#55e98f", textShadow: "0 0 14px rgba(85,233,143,.4)" },
+  "Sucesso Bom": { color: "#5de1ff", textShadow: "0 0 14px rgba(93,225,255,.45)" },
+  "Sucesso Extremo": { color: "#f7fbff", textShadow: "0 0 15px rgba(93,225,255,.6)" },
+  "Sucesso Perfeito": { color: "#f7c948", textShadow: "0 0 18px rgba(247,201,72,.65)" },
 };
 
 function categorize(roll, skill, sor) {
@@ -207,24 +63,25 @@ function categorize(roll, skill, sor) {
 export default function PericiasSection({
   atributos,
   sor,
-  nivel,
   bonusManual,
   setBonusManual,
   pontosDisponiveis,
   limitePorPericia,
-  fichaId,            // ↖ Adicionado
-  nomePersonagem,     // ↖ Adicionado
-  registrarRolagem,   // ↖ Adicionado
+  fichaId,
+  nomePersonagem,
+  registrarRolagem,
 }) {
   const [rollData, setRollData] = useState(null);
+  const [busca, setBusca] = useState("");
+  const [atributoFiltro, setAtributoFiltro] = useState("TODOS");
+  const [somenteTreinadas, setSomenteTreinadas] = useState(false);
 
-  // Soma total dos bônus padrões (manual)
   const totalDistrib = Object.entries(bonusManual)
     .filter(([chave]) => !chave.startsWith("extra_") && !chave.startsWith("atributo_"))
-    .reduce((sum, [, valor]) => sum + valor, 0);
+    .reduce((sum, [, valor]) => sum + Number(valor || 0), 0);
 
   const handleBonusChange = (nome, val) => {
-    const atual = bonusManual[nome] || 0;
+    const atual = Number(bonusManual[nome] || 0);
     const novoTotal = totalDistrib - atual + val;
     if (
       val >= 0 &&
@@ -235,25 +92,39 @@ export default function PericiasSection({
     }
   };
 
-  const getAttr = (a) => Number(atributos[a] || 0);
+  const getAttr = (atributo) => Number(atributos[atributo] || 0);
 
-  // Monta cada linha com parcial, bônus manual, extra e pool total
-  const linhas = LISTA_PERICIAS.map(({ nome, atributoPadrao }) => {
-    const atr = bonusManual[`atributo_${nome}`] || atributoPadrao;
-    const valAtr = getAttr(atr);
-    const bonus = bonusManual[nome] || 0;
-    const extra = bonusManual[`extra_${nome}`] || 0;
-    const parcial = Math.floor((valAtr + sor) * 0.2);
-    const pool = parcial + bonus + extra;
-    return { nome, atr, parcial, bonus, extra, pool };
+  const linhas = useMemo(
+    () =>
+      LISTA_PERICIAS.map(({ nome, atributoPadrao }) => {
+        const atr = bonusManual[`atributo_${nome}`] || atributoPadrao;
+        const valAtr = getAttr(atr);
+        const bonus = Number(bonusManual[nome] || 0);
+        const extra = Number(bonusManual[`extra_${nome}`] || 0);
+        const parcial = Math.floor((valAtr + sor) * 0.2);
+        const pool = parcial + bonus + extra;
+        return { nome, atr, parcial, bonus, extra, pool };
+      }),
+    [bonusManual, atributos, sor]
+  );
+
+  const linhasFiltradas = linhas.filter((linha) => {
+    const correspondeBusca = linha.nome.toLowerCase().includes(busca.trim().toLowerCase());
+    const correspondeAtributo = atributoFiltro === "TODOS" || linha.atr === atributoFiltro;
+    const correspondeTreino = !somenteTreinadas || linha.bonus > 0 || linha.extra > 0;
+    return correspondeBusca && correspondeAtributo && correspondeTreino;
   });
 
   const rolar = (nome, pool) => {
     const roll = Math.floor(Math.random() * 20) + 1;
     const category = categorize(roll, pool, sor);
-    setRollData({ nome, roll, category });
+    const horario = new Date().toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
 
-    // O Portrait recebe a rolagem antes de qualquer requisição à planilha.
+    setRollData({ nome, roll, category });
     publicarRolagemPortrait({
       fichaId,
       tipo: "Perícia",
@@ -262,145 +133,160 @@ export default function PericiasSection({
       tipoSucesso: category,
     });
 
-    // 1) Atualiza estado local de histórico (via registrarRolagem, se presente)
-    if (registrarRolagem) {
-      registrarRolagem({
-        horario: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
-        personagem: nomePersonagem,
-        pericia: nome,
-        valor: roll,
-        tipoSucesso: category,
-        estilo: categoryStyles[category] || {},
-      });
-    }
+    registrarRolagem?.({
+      horario,
+      personagem: nomePersonagem,
+      pericia: nome,
+      valor: roll,
+      tipoSucesso: category,
+      estilo: categoryStyles[category] || {},
+    });
 
-    // 2) Salva na planilha (aba "Rolagens") via POST
     fetch(BASE_URL, {
       method: "POST",
       body: new URLSearchParams({
         acao: "salvarRolagem",
         "ID da Ficha": fichaId,
-        Horario: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
+        Horario: horario,
         "Nome do Personagem": nomePersonagem,
         Tipo: "Perícia",
         Nome: nome,
         Valor: roll,
         "Tipo de Sucesso": category,
       }),
-    }).catch((err) => {
-      console.error("Erro ao salvar rolagem:", err);
-    });
+    }).catch(console.error);
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Perícias</h2>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={{ ...styles.th, width: "18%" }}>Perícia</th>
-            <th style={{ ...styles.th, width: "12%" }}>Atributo</th>
-            <th style={{ ...styles.th, width: "12%" }}>Bônus</th>
-            <th style={{ ...styles.th, width: "12%" }}>Extra</th>
-            <th style={{ ...styles.th, width: "18%" }}>Treinamento</th>
-            <th style={{ ...styles.th, width: "14%" }}>Total P.</th>
-            <th style={{ ...styles.thLast, width: "10%" }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {linhas.map(({ nome, atr, parcial, bonus, extra, pool }) => (
-            <tr key={nome}>
-              <td style={styles.td}>{nome}</td>
-              <td style={styles.td}>
-                <select
-                  style={styles.select}
-                  value={atr}
-                  onChange={(e) =>
-                    setBonusManual({
-                      ...bonusManual,
-                      [`atributo_${nome}`]: e.target.value,
-                    })
-                  }
-                >
-                  {TODOS_ATRIBUTOS.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td style={styles.td}>{parcial}</td>
-              <td style={styles.td}>
-                <input
-                  type="number"
-                  min={0}
-                  value={extra}
-                  onChange={(e) =>
-                    setBonusManual({
-                      ...bonusManual,
-                      [`extra_${nome}`]: +e.target.value,
-                    })
-                  }
-                  style={styles.input}
-                />
-              </td>
-              <td style={styles.td}>
-                <input
-                  type="number"
-                  min={0}
-                  max={limitePorPericia === Infinity ? undefined : limitePorPericia}
-                  value={bonus}
-                  onChange={(e) => handleBonusChange(nome, +e.target.value)}
-                  style={styles.input}
-                />
-              </td>
-              <td style={styles.td}>{pool}</td>
-              <td style={styles.tdLast}>
-                <button
-                  style={styles.rollBtn}
-                  onClick={() => rolar(nome, pool)}
-                >
-                  <FaDiceD20 />
-                </button>
-              </td>
+    <section className="play-section-card skills-section">
+      <div className="play-section-heading skills-heading">
+        <div>
+          <span className="play-eyebrow">TESTES E ESPECIALIZAÇÕES</span>
+          <h2>Perícias</h2>
+          <p>Encontre uma perícia, ajuste o treinamento e role sem sair da tela.</p>
+        </div>
+        <div className="skills-budget">
+          <span>Pontos distribuídos</span>
+          <strong>{totalDistrib}<em>/ {pontosDisponiveis}</em></strong>
+          <small>Limite por perícia: {limitePorPericia === Infinity ? "∞" : `+${limitePorPericia}`}</small>
+        </div>
+      </div>
+
+      <div className="skills-toolbar">
+        <label className="skills-search">
+          <Search size={17} />
+          <input
+            value={busca}
+            onChange={(event) => setBusca(event.target.value)}
+            placeholder="Buscar perícia..."
+          />
+          {busca && <button type="button" onClick={() => setBusca("")}><X size={15} /></button>}
+        </label>
+
+        <label className="skills-filter-select">
+          <SlidersHorizontal size={16} />
+          <select value={atributoFiltro} onChange={(event) => setAtributoFiltro(event.target.value)}>
+            <option value="TODOS">Todos os atributos</option>
+            {TODOS_ATRIBUTOS.map((atributo) => <option key={atributo} value={atributo}>{atributo}</option>)}
+          </select>
+          <ChevronDown size={15} />
+        </label>
+
+        <button
+          type="button"
+          className={`skills-trained-toggle ${somenteTreinadas ? "is-active" : ""}`}
+          onClick={() => setSomenteTreinadas((value) => !value)}
+        >
+          <Dices size={16} /> Somente treinadas
+        </button>
+      </div>
+
+      <div className="skills-table-wrap">
+        <table className="skills-table">
+          <thead>
+            <tr>
+              <th>Perícia</th>
+              <th>Atributo</th>
+              <th>Base</th>
+              <th>Extra</th>
+              <th>Treino</th>
+              <th>Total</th>
+              <th aria-label="Rolar" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {linhasFiltradas.map(({ nome, atr, parcial, bonus, extra, pool }) => (
+              <tr key={nome}>
+                <td data-label="Perícia"><strong>{nome}</strong></td>
+                <td data-label="Atributo">
+                  <select
+                    value={atr}
+                    onChange={(event) =>
+                      setBonusManual({
+                        ...bonusManual,
+                        [`atributo_${nome}`]: event.target.value,
+                      })
+                    }
+                  >
+                    {TODOS_ATRIBUTOS.map((atributo) => (
+                      <option key={atributo} value={atributo}>{atributo}</option>
+                    ))}
+                  </select>
+                </td>
+                <td data-label="Base"><span className="skills-number-muted">{parcial}</span></td>
+                <td data-label="Extra">
+                  <input
+                    type="number"
+                    min={0}
+                    value={extra}
+                    onChange={(event) =>
+                      setBonusManual({
+                        ...bonusManual,
+                        [`extra_${nome}`]: +event.target.value,
+                      })
+                    }
+                  />
+                </td>
+                <td data-label="Treino">
+                  <input
+                    type="number"
+                    min={0}
+                    max={limitePorPericia === Infinity ? undefined : limitePorPericia}
+                    value={bonus}
+                    onChange={(event) => handleBonusChange(nome, +event.target.value)}
+                  />
+                </td>
+                <td data-label="Total"><strong className="skills-total">{pool}</strong></td>
+                <td className="skills-roll-cell">
+                  <button type="button" onClick={() => rolar(nome, pool)} title={`Rolar ${nome}`}>
+                    <FaDiceD20 /><span>Rolar</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {linhasFiltradas.length === 0 && (
+          <div className="skills-empty">
+            <Search size={24} />
+            <strong>Nenhuma perícia encontrada</strong>
+            <span>Remova algum filtro ou tente outra busca.</span>
+          </div>
+        )}
+      </div>
 
       {rollData && (
-        <div style={styles.resultCard}>
-          <button style={styles.closeBtn} onClick={() => setRollData(null)}>
-            ✕
-          </button>
-          <FaDiceD20 style={styles.resultIcon} />
-          <div style={styles.resultText}>
-            <span style={styles.resultName}>{rollData.nome}</span>
-            <span style={styles.resultRoll}>[d20] → {rollData.roll}</span>
-            <span
-              style={{
-                ...styles.resultCategory,
-                ...categoryStyles[rollData.category],
-              }}
-            >
-              {rollData.category}
-            </span>
+        <div className="play-roll-toast skills-roll-toast">
+          <button type="button" onClick={() => setRollData(null)} aria-label="Fechar resultado">×</button>
+          <div className="play-roll-die"><FaDiceD20 /><strong>{rollData.roll}</strong></div>
+          <div className="play-roll-copy">
+            <span>ROLAGEM DE PERÍCIA</span>
+            <strong>{rollData.nome}</strong>
+            <b style={categoryStyles[rollData.category]}>{rollData.category}</b>
           </div>
         </div>
       )}
-
-      <div style={styles.summary}>
-        Pontos distribuídos: {totalDistrib} / {pontosDisponiveis} | Limite:{" "}
-        {limitePorPericia === Infinity ? "∞" : `+${limitePorPericia}`}
-      </div>
-    </div>
+    </section>
   );
 }

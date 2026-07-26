@@ -1,5 +1,5 @@
-// src/components/CharacterHeader.jsx
 import React, { useRef, useState } from "react";
+import { Copy, ExternalLink, Radio, UserRound } from "lucide-react";
 import { obterTokenPortrait } from "../utils/portraitRealtime";
 
 const CLASSES = ["Combatente", "Especialista", "Ocultista"];
@@ -28,8 +28,6 @@ function carregarImagem(src) {
 async function prepararAvatar(file) {
   const dataUrlOriginal = await lerArquivoComoDataUrl(file);
   const image = await carregarImagem(dataUrlOriginal);
-
-  // Recorta a região central para a foto encaixar corretamente no círculo.
   const ladoOriginal = Math.min(image.naturalWidth, image.naturalHeight);
   const origemX = (image.naturalWidth - ladoOriginal) / 2;
   const origemY = (image.naturalHeight - ladoOriginal) / 2;
@@ -45,7 +43,6 @@ async function prepararAvatar(file) {
     const canvas = document.createElement("canvas");
     canvas.width = tentativa.tamanho;
     canvas.height = tentativa.tamanho;
-
     const context = canvas.getContext("2d");
     if (!context) throw new Error("O navegador não conseguiu preparar a imagem.");
 
@@ -63,12 +60,9 @@ async function prepararAvatar(file) {
     );
 
     let resultado = canvas.toDataURL("image/webp", tentativa.qualidade);
-
-    // Navegadores antigos podem não gerar WEBP pelo canvas.
     if (!resultado.startsWith("data:image/webp")) {
       resultado = canvas.toDataURL("image/jpeg", tentativa.qualidade);
     }
-
     if (resultado.length <= LIMITE_TEXTO_PLANILHA) return resultado;
   }
 
@@ -88,13 +82,14 @@ export default function CharacterHeader({
   const [linkCopiado, setLinkCopiado] = useState(false);
 
   const nome = ficha["Nome do Personagem"] || "Personagem";
+  const origem = ficha.Origem || ficha["Origem"] || "Origem não informada";
+  const trilha = ficha.Trilha || ficha["Trilha"] || "Agente em campo";
   const iniciais = nome
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((parte) => parte[0]?.toUpperCase())
     .join("");
-
   const imagemExibida = imagemUrl || ficha["Imagem do Personagem"] || "";
   const portraitToken = obterTokenPortrait(ficha.ID);
   const portraitUrl = `${window.location.origin}/portrait/${encodeURIComponent(ficha.ID)}?token=${encodeURIComponent(portraitToken)}`;
@@ -118,20 +113,18 @@ export default function CharacterHeader({
       setMensagemImagem("Use uma imagem JPG, PNG ou WEBP.");
       return;
     }
-
     if (file.size > TAMANHO_MAXIMO) {
       setMensagemImagem("A imagem deve ter no máximo 8 MB.");
       return;
     }
 
     setProcessando(true);
-    setMensagemImagem("Preparando imagem...");
-
+    setMensagemImagem("Preparando retrato...");
     try {
       const avatar = await prepararAvatar(file);
       setImagemComErro(false);
       onImagemChange?.(avatar);
-      setMensagemImagem("Imagem alterada — clique em Salvar Ficha.");
+      setMensagemImagem("Retrato alterado. Salve a ficha para confirmar.");
     } catch (error) {
       console.error("Erro ao preparar avatar:", error);
       setMensagemImagem(error.message || "Não foi possível usar essa imagem.");
@@ -141,184 +134,70 @@ export default function CharacterHeader({
   };
 
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.container}>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={processando}
-          title="Clique para alterar a imagem do personagem"
-          aria-label="Alterar imagem do personagem"
-          style={{
-            ...styles.avatarButton,
-            cursor: processando ? "wait" : "pointer",
-          }}
-        >
-          {imagemExibida && !imagemComErro ? (
-            <img
-              src={imagemExibida}
-              alt={nome}
-              onError={() => setImagemComErro(true)}
-              style={styles.avatar}
-            />
-          ) : (
-            <span style={styles.placeholder}>{iniciais || "?"}</span>
-          )}
+    <div className="character-identity">
+      <button
+        type="button"
+        className="character-avatar-button"
+        onClick={() => inputRef.current?.click()}
+        disabled={processando}
+        title="Clique para alterar o retrato"
+        aria-label="Alterar retrato do personagem"
+      >
+        {imagemExibida && !imagemComErro ? (
+          <img
+            src={imagemExibida}
+            alt={nome}
+            onError={() => setImagemComErro(true)}
+          />
+        ) : (
+          <span>{iniciais || <UserRound size={38} />}</span>
+        )}
+        <i>{processando ? "Processando" : "Alterar retrato"}</i>
+      </button>
 
-        </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={selecionarImagem}
+        hidden
+      />
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={selecionarImagem}
-          style={{ display: "none" }}
-        />
-
-        <div style={styles.info}>
-          <h2 style={styles.name}>{nome}</h2>
-          <div style={styles.nex}>NEX: {ficha.NEX}%</div>
-          <div style={styles.portraitActions}>
-            <button
-              type="button"
-              onClick={() => window.open(portraitUrl, "_blank", "noopener,noreferrer")}
-              style={styles.portraitButton}
-            >
-              Abrir Portrait
-            </button>
-            <button
-              type="button"
-              onClick={copiarLinkPortrait}
-              style={styles.portraitButtonSecondary}
-            >
-              {linkCopiado ? "Link copiado!" : "Copiar link OBS"}
-            </button>
-          </div>
-          {mensagemImagem && (
-            <div
-              style={{
-                ...styles.imageMessage,
-                color:
-                  mensagemImagem.startsWith("Use") ||
-                  mensagemImagem.startsWith("A imagem") ||
-                  mensagemImagem.startsWith("Não")
-                    ? "#ff6b6b"
-                    : "#B2955D",
-              }}
-            >
-              {mensagemImagem}
-            </div>
-          )}
+      <div className="character-main-info">
+        <div className="character-kicker"><Radio size={14} /> AGENTE CONECTADO</div>
+        <h1>{nome}</h1>
+        <div className="character-meta-line">
+          <span className="character-nex">NEX {ficha.NEX || 0}%</span>
+          <span>{origem}</span>
+          <span>{trilha}</span>
         </div>
 
-        <select
-          value={ficha.Classe}
-          onChange={(event) => onClasseChange(event.target.value)}
-          style={styles.classSelect}
-        >
-          {CLASSES.map((classe) => (
-            <option key={classe} value={classe}>
-              {classe}
-            </option>
-          ))}
-        </select>
+        <div className="character-controls">
+          <label>
+            <span>Classe</span>
+            <select value={ficha.Classe || CLASSES[0]} onChange={(event) => onClasseChange(event.target.value)}>
+              {CLASSES.map((classe) => (
+                <option key={classe} value={classe}>{classe}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="character-portrait-actions">
+            <button type="button" onClick={() => window.open(portraitUrl, "_blank", "noopener,noreferrer")}>
+              <ExternalLink size={16} /> Abrir Portrait
+            </button>
+            <button type="button" onClick={copiarLinkPortrait}>
+              <Copy size={16} /> {linkCopiado ? "Link copiado" : "Copiar link OBS"}
+            </button>
+          </div>
+        </div>
+
+        {mensagemImagem && (
+          <div className={`character-image-message ${mensagemImagem.startsWith("Use") || mensagemImagem.startsWith("A imagem") || mensagemImagem.startsWith("Não") ? "is-error" : ""}`}>
+            {mensagemImagem}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-const styles = {
-  wrapper: {
-    marginBottom: 24,
-  },
-  container: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-  },
-  avatarButton: {
-    position: "relative",
-    width: 86,
-    height: 86,
-    minWidth: 86,
-    padding: 0,
-    borderRadius: "50%",
-    border: "2px solid #D4AF37",
-    overflow: "hidden",
-    background: "#111",
-    color: "#D4AF37",
-    boxShadow: "0 0 0 2px rgba(212, 175, 55, 0.08)",
-  },
-  avatar: {
-    width: "100%",
-    height: "100%",
-    display: "block",
-    objectFit: "cover",
-  },
-  placeholder: {
-    display: "flex",
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#D4AF37",
-  },
-  info: {
-    flex: 1,
-    minWidth: 0,
-  },
-  name: {
-    margin: 0,
-    color: "#D4AF37",
-    fontSize: 24,
-  },
-  nex: {
-    marginTop: 4,
-    color: "#D4AF37",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  portraitActions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 8,
-  },
-  portraitButton: {
-    padding: "5px 9px",
-    border: "1px solid #D4AF37",
-    borderRadius: 5,
-    background: "#D4AF37",
-    color: "#000",
-    fontSize: 11,
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  portraitButtonSecondary: {
-    padding: "5px 9px",
-    border: "1px solid #D4AF37",
-    borderRadius: 5,
-    background: "transparent",
-    color: "#D4AF37",
-    fontSize: 11,
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  imageMessage: {
-    marginTop: 5,
-    maxWidth: 260,
-    fontSize: 12,
-    lineHeight: 1.25,
-  },
-  classSelect: {
-    padding: "6px 12px",
-    background: "#000",
-    border: "1px solid #D4AF37",
-    borderRadius: 4,
-    color: "#D4AF37",
-    fontSize: 14,
-    cursor: "pointer",
-  },
-};

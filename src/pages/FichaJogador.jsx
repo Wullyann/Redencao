@@ -1,6 +1,21 @@
-// src/pages/FichaJogador.jsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  AlertCircle,
+  Backpack,
+  BookOpen,
+  CheckCircle2,
+  CircleDollarSign,
+  Dices,
+  History,
+  LayoutDashboard,
+  LogOut,
+  Save,
+  ScrollText,
+  Shield,
+  Sparkles,
+  Swords,
+} from "lucide-react";
 import { FaDiceD20 } from "react-icons/fa";
 import CharacterHeader from "../components/CharacterHeader";
 import VitalStatsSection from "../components/VitalStatsSection";
@@ -9,6 +24,8 @@ import RituaisSection from "../components/RituaisSection";
 import CombatEntryForm from "../components/CombatEntryForm";
 import HabilidadesSection from "../components/HabilidadesSection";
 import RolagensSection from "../components/RolagensSection";
+import InventarioSection from "../components/InventarioSection";
+import CarteiraSection from "../components/CarteiraSection";
 import {
   getNivel,
   getLimiteBonusPorNivel,
@@ -17,21 +34,37 @@ import {
   getPE,
   getSAN,
 } from "../utils/calculosPorClasse";
-import { useSearchParams } from "react-router-dom";
 import {
   conectarCanalPortraitRemoto,
   obterTokenPortrait,
   publicarRolagemPortrait,
   publicarStatusPortrait,
 } from "../utils/portraitRealtime";
+import "./FichaJogador.css";
 
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
 
-// Atributos
 const ATRIBUTOS = ["AGI", "FOR", "INT", "PRE", "VIG", "SOR"];
+const ATRIBUTO_NOMES = {
+  AGI: "Agilidade",
+  FOR: "Força",
+  INT: "Intelecto",
+  PRE: "Presença",
+  VIG: "Vigor",
+  SOR: "Sorte",
+};
 const BASE_VALUE = 4;
 const MAX_REDUCTION = 6;
+
+const MODULES = [
+  { id: "Combate", label: "Combate", subtitle: "Ataques e equipamentos", icon: Swords },
+  { id: "Habilidades", label: "Habilidades", subtitle: "Poderes e características", icon: Sparkles },
+  { id: "Rituais", label: "Rituais", subtitle: "Conhecimento paranormal", icon: ScrollText },
+  { id: "Inventário", label: "Inventário", subtitle: "Itens e carga", icon: Backpack },
+  { id: "Rolagens", label: "Rolagens", subtitle: "Histórico da sessão", icon: History },
+  { id: "Carteira", label: "Carteira", subtitle: "Recursos e valores", icon: CircleDollarSign },
+];
 
 function categorize(roll, skill, sor) {
   if (roll === 1 && sor < 20) return "Desastre";
@@ -47,32 +80,25 @@ function categorize(roll, skill, sor) {
 }
 
 const categoryStyles = {
-  Desastre: { color: "#DC143C", textShadow: "0 0 16px #DC143C, 0 0 24px #FF0000" },
-  Fracasso: { color: "#8B0000", textShadow: "0 0 6px #8B0000" },
-  Sucesso: {
-    color: "#00FF00",
-    textShadow: "0 0 12px #00FF00",
-    fontSize: "20px",
-  },
-  "Sucesso Bom": {
-    color: "#00FFFF",
-    textShadow: "0 0 12px #00FFFF",
-    fontSize: "18px",
-  },
-  "Sucesso Extremo": {
-    color: "#FFFFFF",
-    textShadow: "0 0 8px #00FFFF",
-    fontSize: "18px",
-  },
-  "Sucesso Perfeito": {
-    color: "#FFD700",
-    textShadow: "0 0 8px #FFD700",
-    fontSize: "22px",
-  },
+  Desastre: { color: "#ff3b5c", textShadow: "0 0 18px rgba(255,59,92,.75)" },
+  Fracasso: { color: "#ff6b6b", textShadow: "0 0 12px rgba(255,107,107,.35)" },
+  Sucesso: { color: "#55e98f", textShadow: "0 0 14px rgba(85,233,143,.4)" },
+  "Sucesso Bom": { color: "#5de1ff", textShadow: "0 0 14px rgba(93,225,255,.45)" },
+  "Sucesso Extremo": { color: "#f7fbff", textShadow: "0 0 15px rgba(93,225,255,.6)" },
+  "Sucesso Perfeito": { color: "#f7c948", textShadow: "0 0 18px rgba(247,201,72,.65)" },
 };
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("usuario") || "null");
+  } catch {
+    return null;
+  }
+}
 
 export default function FichaJogador() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [ficha, setFicha] = useState(null);
   const [bonusManual, setBonusManual] = useState({});
   const [pvAtual, setPvAtual] = useState(0);
@@ -87,88 +113,84 @@ export default function FichaJogador() {
   const [hasChanges, setHasChanges] = useState(false);
   const [statusAlterado, setStatusAlterado] = useState(false);
   const [imagemUrl, setImagemUrl] = useState("");
+  const [activeModule, setActiveModule] = useState("Combate");
+  const [saveState, setSaveState] = useState({ type: "idle", message: "" });
 
+  const nivel = ficha ? getNivel(ficha.NEX) : 1;
+  const usuarioAtual = getStoredUser();
+  const isMestre = usuarioAtual?.tipo === "mestre";
 
-  // Carrega ficha do jogador
-const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const idFromUrl = searchParams.get("id");
+    const data = localStorage.getItem("usuario");
 
-useEffect(() => {
-  const idFromUrl = searchParams.get("id");
-  const data = localStorage.getItem("usuario");
+    fetch(`${BASE_URL}?sheet=Fichas`)
+      .then((r) => r.json())
+      .then((lista) => {
+        let encontrada;
 
-  fetch(`${BASE_URL}?sheet=Fichas`)
-    .then((r) => r.json())
-    .then((lista) => {
-      let m;
-
-      // Se veio ID na URL, busca direto
-      if (idFromUrl) {
-        m = lista.find((f) => String(f.ID) === idFromUrl);
-      } else if (data) {
-        const { usuario } = JSON.parse(data);
-        m = lista.find(
-          (f) => f["Login do Jogador"]?.toLowerCase() === usuario.toLowerCase()
-        );
-      }
-
-      if (!m) return navigate("/");
-
-      setFicha(m);
-      setImagemUrl(m["Imagem do Personagem"] || "");
-      console.log("🧩 Ficha carregada:", m);
-
-      const bm = {};
-      Object.keys(m).forEach((k) => {
-        if (k.startsWith("Bonus_")) {
-          bm[k.replace("Bonus_", "")] = +m[k];
+        if (idFromUrl) {
+          encontrada = lista.find((item) => String(item.ID) === String(idFromUrl));
+        } else if (data) {
+          const { usuario } = JSON.parse(data);
+          encontrada = lista.find(
+            (item) =>
+              item["Login do Jogador"]?.toLowerCase() === String(usuario).toLowerCase()
+          );
         }
-      });
-      setBonusManual(bm);
-    })
-    .catch(() => navigate("/"));
-}, [navigate, searchParams]);
 
+        if (!encontrada) return navigate("/");
 
-  // Atualiza PV/PE/SAN máximos e iniciais
+        setFicha(encontrada);
+        setImagemUrl(encontrada["Imagem do Personagem"] || "");
+
+        const bonus = {};
+        Object.keys(encontrada).forEach((chave) => {
+          if (chave.startsWith("Bonus_")) {
+            bonus[chave.replace("Bonus_", "")] = +encontrada[chave];
+          }
+        });
+        setBonusManual(bonus);
+      })
+      .catch(() => navigate("/"));
+  }, [navigate, searchParams]);
+
   useEffect(() => {
     if (!ficha) return;
-const modPV = Number(ficha["Mod. PV Máx."]) || 0;
-const modPE = Number(ficha["Mod. PE Máx."]) || 0;
-const modSAN = Number(ficha["Mod. SAN Máx."]) || 0;
 
-setPvMax(getPV(ficha.Classe, +ficha.VIG, nivel) + modPV);
-setPeMax(getPE(ficha.Classe, +ficha.PRE, nivel) + modPE);
-setSanMax(getSAN(ficha.Classe, nivel) + modSAN);
-
-const parseOr = (val, fallback) => {
-  const num = Number(val);
-  return isNaN(num) ? fallback : num;
-};
-
-setPvAtual(parseOr(ficha["PV Atual"], getPV(ficha.Classe, +ficha.VIG, nivel) + modPV));
-setPeAtual(parseOr(ficha["PE Atual"], getPE(ficha.Classe, +ficha.PRE, nivel) + modPE));
-setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSAN));
-
-
-  }, [ficha]);
-
-  // Aviso ao fechar sem salvar
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasChanges) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
+    const modPV = Number(ficha["Mod. PV Máx."]) || 0;
+    const modPE = Number(ficha["Mod. PE Máx."]) || 0;
+    const modSAN = Number(ficha["Mod. SAN Máx."]) || 0;
+    const novoPvMax = getPV(ficha.Classe, +ficha.VIG, nivel) + modPV;
+    const novoPeMax = getPE(ficha.Classe, +ficha.PRE, nivel) + modPE;
+    const novoSanMax = getSAN(ficha.Classe, nivel) + modSAN;
+    const parseOr = (value, fallback) => {
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? fallback : parsed;
     };
+
+    setPvMax(novoPvMax);
+    setPeMax(novoPeMax);
+    setSanMax(novoSanMax);
+    setPvAtual(parseOr(ficha["PV Atual"], novoPvMax));
+    setPeAtual(parseOr(ficha["PE Atual"], novoPeMax));
+    setSanAtual(parseOr(ficha["Sanidade Atual"], novoSanMax));
+  }, [ficha, nivel]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!hasChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () =>
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasChanges]);
 
-  // Auto-save ao fechar/recarregar
   useEffect(() => {
     const handleUnload = () => {
-      if (!hasChanges) return;
+      if (!hasChanges || !ficha) return;
       const formData = new URLSearchParams();
       formData.append("acao", "salvarFicha");
       formData.append("ID", ficha.ID);
@@ -180,12 +202,13 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSA
       formData.append("PV Máx.", pvMax);
       formData.append("PE Máx.", peMax);
       formData.append("Sanidade Máx.", sanMax);
-      ATRIBUTOS.forEach((a) => formData.append(a, ficha[a]));
+      ATRIBUTOS.forEach((atributo) => formData.append(atributo, ficha[atributo]));
       Object.entries(bonusManual).forEach(([nome, valor]) => {
         formData.append(`Bonus_${nome}`, valor);
       });
       navigator.sendBeacon(BASE_URL, formData);
     };
+
     window.addEventListener("unload", handleUnload);
     return () => window.removeEventListener("unload", handleUnload);
   }, [
@@ -201,17 +224,14 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSA
     hasChanges,
   ]);
 
-  // Mantém uma conexão direta com o Portrait, inclusive quando ele está no OBS.
   useEffect(() => {
     if (!ficha?.ID) return undefined;
     const token = obterTokenPortrait(ficha.ID);
     return conectarCanalPortraitRemoto({ fichaId: ficha.ID, token });
   }, [ficha?.ID]);
 
-  // Entrega os status imediatamente ao Portrait.
   useEffect(() => {
     if (!ficha?.ID) return;
-
     publicarStatusPortrait({
       fichaId: ficha.ID,
       pvAtual,
@@ -223,7 +243,6 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSA
     });
   }, [ficha?.ID, pvAtual, pvMax, sanAtual, sanMax, peAtual, peMax]);
 
-  // Mantém a planilha atualizada como segurança e para outras máquinas.
   useEffect(() => {
     if (!statusAlterado || !ficha?.ID) return undefined;
 
@@ -237,10 +256,7 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSA
       formData.append("PV Máx.", pvMax);
       formData.append("PE Máx.", peMax);
       formData.append("Sanidade Máx.", sanMax);
-
-      fetch(BASE_URL, { method: "POST", body: formData }).catch((error) => {
-        console.error("Erro ao sincronizar status com o Portrait:", error);
-      });
+      fetch(BASE_URL, { method: "POST", body: formData }).catch(console.error);
     }, 650);
 
     return () => window.clearTimeout(timer);
@@ -255,124 +271,21 @@ setSanAtual(parseOr(ficha["Sanidade Atual"], getSAN(ficha.Classe, nivel) + modSA
     sanMax,
   ]);
 
-if (!ficha) {
-  return <div style={{ color: "#fff" }}>Carregando ficha...</div>;
-}
-
-const nivel = getNivel(ficha.NEX);
-const sor = +ficha.SOR;
-const TOTAL_POINTS = ATRIBUTOS.length * BASE_VALUE + 20 + (nivel - 1);
-
-
-  // Cálculo de níveis, atributos, perícias
-const atributosNum = ATRIBUTOS.reduce((o, k) => {
-  const raw = ficha[k];
-  return {
-    ...o,
-    [k]: raw != null ? Number(raw) : BASE_VALUE,
-  };
-}, {});
-  const pontosPericia = getPontosPericiaTotal(
-    ficha.Classe,
-    atributosNum.INT,
-    nivel
-  );
-  const limitePorPericia = getLimiteBonusPorNivel(nivel);
-
-  // Distribuição de atributos
-  const sumAttrs = ATRIBUTOS.reduce(
-    (sum, a) => sum + atributosNum[a],
-    0
-  );
-  const restantes = TOTAL_POINTS - sumAttrs;
-  const reducao = ATRIBUTOS.reduce(
-    (sum, a) => sum + Math.max(0, BASE_VALUE - atributosNum[a]),
-    0
-  );
-const capA = nivel >= 18 ? Infinity : nivel <= 6 ? 12 : nivel <= 13 ? 15 : 18;
-
-  // Handler de alteração de atributo
-  const handleAtributoChange = (attr, novoVal) => {
-    setHasChanges(true);
-    if (novoVal < 0 || novoVal > capA) {
-      setErroAtributos(`Valor entre 0 e ${capA}.`);
-      return;
-    }
-    const newAttrs = {
-      ...atributosNum,
-      [attr]: novoVal,
-    };
-    const newSum = ATRIBUTOS.reduce((s, a) => s + newAttrs[a], 0);
-    const newRed = ATRIBUTOS.reduce(
-      (s, a) => s + Math.max(0, BASE_VALUE - newAttrs[a]),
-      0
+  const atributosNum = useMemo(() => {
+    if (!ficha) return ATRIBUTOS.reduce((result, key) => ({ ...result, [key]: BASE_VALUE }), {});
+    return ATRIBUTOS.reduce(
+      (result, key) => ({
+        ...result,
+        [key]: ficha[key] != null ? Number(ficha[key]) : BASE_VALUE,
+      }),
+      {}
     );
-    if (newRed > MAX_REDUCTION) {
-      setErroAtributos(`Máx ${MAX_REDUCTION} pontos de redução.`);
-      return;
-    }
-    if (newSum > TOTAL_POINTS) {
-      setErroAtributos(`Excedeu ${TOTAL_POINTS} pontos.`);
-      return;
-    }
-    setErroAtributos("");
-    setFicha({ ...ficha, [attr]: novoVal });
-  };
+  }, [ficha]);
 
-  // Rolar atributo
-const rolarAttr = (nome, valor) => {
-  const roll = Math.floor(Math.random() * 20) + 1;
-  const category = categorize(roll, valor, sor);
-  const agora = new Date().toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const salvarFicha = useCallback(async () => {
+    if (!ficha || saveState.type === "saving") return;
 
-  // Atualiza o histórico local
-  setHistoricoRolagens((prev) => [
-    {
-      horario: agora,
-      personagem: ficha["Nome do Personagem"] || "Desconhecido",
-      pericia: nome,
-      valor: roll,
-      tipoSucesso: category,
-      estilo: categoryStyles[category] || {},
-    },
-    ...prev,
-  ]);
-
-  // Envia ao Portrait no mesmo instante em que o popup local aparece.
-  publicarRolagemPortrait({
-    fichaId: ficha.ID,
-    tipo: "Atributo",
-    nome,
-    valor: roll,
-    tipoSucesso: category,
-  });
-
-  // A planilha continua apenas como histórico e fallback.
-  fetch(BASE_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      acao: "salvarRolagem",
-      "ID da Ficha": ficha.ID,
-      Horario: agora,
-      "Nome do Personagem": ficha["Nome do Personagem"],
-      Tipo: "Atributo",
-      Nome: nome,
-      Valor: roll,
-      "Tipo de Sucesso": category,
-    }),
-  });
-
-  setRollAttr({ nome, roll, category });
-  setHasChanges(true);
-};
-
-
-  // Salvar ficha completa
-  const salvarFicha = async () => {
+    setSaveState({ type: "saving", message: "Salvando alterações..." });
     const formData = new URLSearchParams();
     formData.append("acao", "salvarFicha");
     formData.append("ID", ficha.ID);
@@ -384,23 +297,21 @@ const rolarAttr = (nome, valor) => {
     formData.append("PV Máx.", pvMax);
     formData.append("PE Máx.", peMax);
     formData.append("Sanidade Máx.", sanMax);
-    ATRIBUTOS.forEach((a) => formData.append(a, ficha[a]));
+    ATRIBUTOS.forEach((atributo) => formData.append(atributo, ficha[atributo]));
     Object.entries(bonusManual).forEach(([nome, valor]) => {
       formData.append(`Bonus_${nome}`, valor);
     });
+
     try {
       const response = await fetch(BASE_URL, { method: "POST", body: formData });
       const responseText = await response.text();
-
-      if (!response.ok) {
-        throw new Error(`Servidor respondeu com erro ${response.status}.`);
-      }
+      if (!response.ok) throw new Error(`Servidor respondeu com erro ${response.status}.`);
 
       let resultado = null;
       try {
         resultado = JSON.parse(responseText);
       } catch {
-        // Algumas versões do Apps Script respondem apenas texto.
+        resultado = null;
       }
 
       const mensagemServidor = String(
@@ -413,54 +324,238 @@ const rolarAttr = (nome, valor) => {
         mensagemServidor.includes("ação inválida") ||
         mensagemServidor.includes("acao invalida")
       ) {
-        throw new Error(
-          resultado?.message || resultado?.mensagem || responseText || "O servidor recusou o salvamento."
-        );
+        throw new Error(resultado?.message || resultado?.mensagem || responseText);
       }
 
-      alert("Ficha salva com sucesso!");
       setHasChanges(false);
-    } catch (err) {
-      console.error("Erro ao salvar ficha:", err);
-      alert("Erro ao salvar ficha.");
+      setSaveState({ type: "success", message: "Ficha salva com sucesso." });
+      window.setTimeout(() => setSaveState({ type: "idle", message: "" }), 2600);
+    } catch (error) {
+      console.error("Erro ao salvar ficha:", error);
+      setSaveState({ type: "error", message: "Não foi possível salvar a ficha." });
+    }
+  }, [
+    ficha,
+    imagemUrl,
+    pvAtual,
+    peAtual,
+    sanAtual,
+    pvMax,
+    peMax,
+    sanMax,
+    bonusManual,
+    saveState.type,
+  ]);
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        salvarFicha();
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [salvarFicha]);
+
+  if (!ficha) {
+    return (
+      <div className="play-loading">
+        <div className="play-loading-mark"><Shield size={30} /></div>
+        <div>
+          <strong>Abrindo ficha operacional</strong>
+          <span>Sincronizando os dados do personagem...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const sor = +ficha.SOR;
+  const totalPoints = ATRIBUTOS.length * BASE_VALUE + 20 + (nivel - 1);
+  const pontosPericia = getPontosPericiaTotal(ficha.Classe, atributosNum.INT, nivel);
+  const limitePorPericia = getLimiteBonusPorNivel(nivel);
+  const sumAttrs = ATRIBUTOS.reduce((sum, atributo) => sum + atributosNum[atributo], 0);
+  const restantes = totalPoints - sumAttrs;
+  const reducao = ATRIBUTOS.reduce(
+    (sum, atributo) => sum + Math.max(0, BASE_VALUE - atributosNum[atributo]),
+    0
+  );
+  const capA = nivel >= 18 ? Infinity : nivel <= 6 ? 12 : nivel <= 13 ? 15 : 18;
+
+  const handleAtributoChange = (attr, novoVal) => {
+    if (novoVal < 0 || novoVal > capA) {
+      setErroAtributos(`O valor precisa ficar entre 0 e ${capA}.`);
+      return;
+    }
+
+    const newAttrs = { ...atributosNum, [attr]: novoVal };
+    const newSum = ATRIBUTOS.reduce((sum, atributo) => sum + newAttrs[atributo], 0);
+    const newRed = ATRIBUTOS.reduce(
+      (sum, atributo) => sum + Math.max(0, BASE_VALUE - newAttrs[atributo]),
+      0
+    );
+
+    if (newRed > MAX_REDUCTION) {
+      setErroAtributos(`O máximo é ${MAX_REDUCTION} pontos de redução.`);
+      return;
+    }
+    if (newSum > totalPoints) {
+      setErroAtributos(`Você ultrapassou o limite de ${totalPoints} pontos.`);
+      return;
+    }
+
+    setErroAtributos("");
+    setHasChanges(true);
+    setFicha((current) => ({ ...current, [attr]: novoVal }));
+  };
+
+  const rolarAttr = (nome, valor) => {
+    const roll = Math.floor(Math.random() * 20) + 1;
+    const category = categorize(roll, valor, sor);
+    const agora = new Date().toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    setHistoricoRolagens((prev) => [
+      {
+        horario: agora,
+        personagem: ficha["Nome do Personagem"] || "Desconhecido",
+        pericia: nome,
+        valor: roll,
+        tipoSucesso: category,
+        estilo: categoryStyles[category] || {},
+      },
+      ...prev,
+    ]);
+
+    publicarRolagemPortrait({
+      fichaId: ficha.ID,
+      tipo: "Atributo",
+      nome,
+      valor: roll,
+      tipoSucesso: category,
+    });
+
+    fetch(BASE_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        acao: "salvarRolagem",
+        "ID da Ficha": ficha.ID,
+        Horario: agora,
+        "Nome do Personagem": ficha["Nome do Personagem"],
+        Tipo: "Atributo",
+        Nome: nome,
+        Valor: roll,
+        "Tipo de Sucesso": category,
+      }),
+    }).catch(console.error);
+
+    setRollAttr({ nome, roll, category });
+  };
+
+  const handleExit = () => {
+    if (isMestre) {
+      navigate("/painel");
+      return;
+    }
+    localStorage.removeItem("usuario");
+    navigate("/");
+  };
+
+  const renderModule = () => {
+    switch (activeModule) {
+      case "Habilidades":
+        return (
+          <HabilidadesSection
+            fichaId={ficha.ID}
+            atributos={atributosNum}
+            sor={sor}
+            nivel={nivel}
+            bonusManual={bonusManual}
+            setBonusManual={(value) => {
+              setBonusManual(value);
+              setHasChanges(true);
+            }}
+            pontosDisponiveis={pontosPericia}
+            limitePorPericia={limitePorPericia}
+          />
+        );
+      case "Rituais":
+        return <RituaisSection fichaId={ficha.ID} nivel={nivel} intelecto={atributosNum.INT} />;
+      case "Inventário":
+        return <InventarioSection fichaId={ficha.ID} />;
+      case "Rolagens":
+        return <RolagensSection fichaId={ficha.ID} />;
+      case "Carteira":
+        return <CarteiraSection fichaId={ficha.ID} />;
+      case "Combate":
+      default:
+        return <CombatEntryForm fichaId={ficha.ID} />;
     }
   };
 
+  const activeModuleData = MODULES.find((item) => item.id === activeModule) || MODULES[0];
+  const ActiveModuleIcon = activeModuleData.icon;
+
   return (
-    <div
-      style={{
-        background: "#000",
-        color: "#D4AF37",
-        minHeight: "100vh",
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          maxWidth: 1200,
-          margin: "0 auto",
-        }}
-      >
-        {/* Lateral: Header e Vital Stats */}
-        <div style={{ flex: "1 1 300px" }}>
+    <div className="play-page">
+      <div className="play-background" aria-hidden="true" />
+
+      <header className="play-topbar">
+        <div className="play-topbar-inner">
+          <div className="play-brand">
+            <span className="play-brand-mark"><Shield size={18} /></span>
+            <div>
+              <strong>REDENÇÃO</strong>
+              <span>Ficha operacional</span>
+            </div>
+          </div>
+
+          <div className="play-topbar-actions">
+            <div className={`play-change-state ${hasChanges ? "is-dirty" : "is-clean"}`}>
+              {hasChanges ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
+              <span>{hasChanges ? "Alterações não salvas" : "Tudo sincronizado"}</span>
+            </div>
+            <button type="button" className="play-ghost-button" onClick={handleExit}>
+              {isMestre ? <LayoutDashboard size={17} /> : <LogOut size={17} />}
+              <span>{isMestre ? "Painel do mestre" : "Sair"}</span>
+            </button>
+            <button
+              type="button"
+              className="play-save-button"
+              onClick={salvarFicha}
+              disabled={saveState.type === "saving"}
+              title="Salvar ficha (Ctrl+S)"
+            >
+              <Save size={18} />
+              <span>{saveState.type === "saving" ? "Salvando..." : "Salvar ficha"}</span>
+              <kbd>Ctrl S</kbd>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="play-shell">
+        <section className="play-hero-card">
           <CharacterHeader
             ficha={ficha}
             imagemUrl={imagemUrl}
             onImagemChange={(novaImagem) => {
               setImagemUrl(novaImagem);
-              setFicha((fichaAtual) => ({
-                ...fichaAtual,
+              setFicha((current) => ({
+                ...current,
                 ["Imagem do Personagem"]: novaImagem,
               }));
               setHasChanges(true);
             }}
             onClasseChange={(newClass) => {
+              setFicha((current) => ({ ...current, Classe: newClass }));
               setHasChanges(true);
-              setFicha({ ...ficha, Classe: newClass });
             }}
           />
+
           <VitalStatsSection
             pvAtual={pvAtual}
             pvMax={pvMax}
@@ -468,254 +563,157 @@ const rolarAttr = (nome, valor) => {
             peMax={peMax}
             sanAtual={sanAtual}
             sanMax={sanMax}
-            setPvAtual={(v) => { setHasChanges(true); setStatusAlterado(true); setPvAtual(v); }}
-            setPeAtual={(v) => { setHasChanges(true); setStatusAlterado(true); setPeAtual(v); }}
-            setSanAtual={(v) => { setHasChanges(true); setStatusAlterado(true); setSanAtual(v); }}
+            setPvAtual={(value) => {
+              setPvAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            setPeAtual={(value) => {
+              setPeAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            setSanAtual={(value) => {
+              setSanAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
             agi={atributosNum.AGI}
             vig={atributosNum.VIG}
-            fichaId={ficha.ID}
-            nivel={nivel}
-            intelecto={atributosNum.INT} 
-              historicoRolagens={historicoRolagens}
-  setHistoricoRolagens={setHistoricoRolagens}
           />
-        </div>
+        </section>
 
-        {/* Conteúdo principal */}
-        <div style={{ flex: "2 1 600px" }}>
-          {erroAtributos && (
-            <p style={{ color: "#FF6347" }}>{erroAtributos}</p>
-          )}
+        <section className="play-section-card play-attributes-section">
+          <div className="play-section-heading">
+            <div>
+              <span className="play-eyebrow">NÚCLEO DO PERSONAGEM</span>
+              <h2>Atributos</h2>
+              <p>Ajuste os valores ou clique no dado para fazer uma rolagem imediata.</p>
+            </div>
+            <div className="play-points-summary">
+              <div><strong>{restantes}</strong><span>restantes</span></div>
+              <div><strong>{reducao}/{MAX_REDUCTION}</strong><span>reduções</span></div>
+            </div>
+          </div>
 
-          {/* === CAIXA DE ATRIBUTOS === */}
-          <div
-            style={{
-              border: "1px solid #D4AF37",
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 24,
-            }}
-          >
-            <h2 style={{ margin: 0, marginBottom: 12, color: "#D4AF37" }}>
-              Atributos
-            </h2>
+          {erroAtributos && <div className="play-inline-error"><AlertCircle size={17} />{erroAtributos}</div>}
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 12,
-              }}
-            >
-              {ATRIBUTOS.map((a) => (
-                <div
-                  key={a}
-                  style={{
-                    background: "#111",
-                    border: "1px solid #D4AF37",
-                    borderRadius: 8,
-                    padding: 12,
-                    textAlign: "center",
-                    position: "relative",
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      color: "#B2955D",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {a}
-                  </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      marginTop: 8,
-                    }}
-                  >
-                    <button
-                      onClick={() =>
-                        handleAtributoChange(a, atributosNum[a] - 1)
-                      }
-                      style={{
-                        background: "transparent",
-                        border: "1px solid #D4AF37",
-                        borderRadius: 4,
-                        width: 24,
-                        height: 24,
-                        color: "#D4AF37",
-                        fontSize: 18,
-                        cursor: "pointer",
-                        lineHeight: 1,
-                      }}
-                    >
-                      –
-                    </button>
-                    <span
-                      style={{
-                        fontSize: 24,
-                        fontWeight: "bold",
-                        color: "#D4AF37",
-                        minWidth: 32,
-                      }}
-                    >
-                      {atributosNum[a]}
-                    </span>
-                    <button
-                      onClick={() =>
-                        handleAtributoChange(a, atributosNum[a] + 1)
-                      }
-                      style={{
-                        background: "transparent",
-                        border: "1px solid #D4AF37",
-                        borderRadius: 4,
-                        width: 24,
-                        height: 24,
-                        color: "#D4AF37",
-                        fontSize: 18,
-                        cursor: "pointer",
-                        lineHeight: 1,
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
+          <div className="play-attributes-grid">
+            {ATRIBUTOS.map((atributo) => (
+              <article className="play-attribute-card" key={atributo}>
+                <div className="play-attribute-copy">
+                  <span>{ATRIBUTO_NOMES[atributo]}</span>
+                  <strong>{atributo}</strong>
+                </div>
+                <div className="play-attribute-controls">
                   <button
-                    onClick={() => rolarAttr(a, atributosNum[a])}
-                    style={{
-                      position: "absolute",
-                      bottom: 8,
-                      right: 8,
-                      background: "transparent",
-                      border: "none",
-                      color: "#D4AF37",
-                      cursor: "pointer",
-                      fontSize: 18,
-                    }}
+                    type="button"
+                    aria-label={`Diminuir ${ATRIBUTO_NOMES[atributo]}`}
+                    onClick={() => handleAtributoChange(atributo, atributosNum[atributo] - 1)}
                   >
-                    <FaDiceD20 />
+                    −
+                  </button>
+                  <b>{atributosNum[atributo]}</b>
+                  <button
+                    type="button"
+                    aria-label={`Aumentar ${ATRIBUTO_NOMES[atributo]}`}
+                    onClick={() => handleAtributoChange(atributo, atributosNum[atributo] + 1)}
+                  >
+                    +
                   </button>
                 </div>
-              ))}
-            </div>
-
-            <p
-              style={{
-                marginTop: 16,
-                color: "#B2955D",
-                fontSize: 14,
-              }}
-            >
-              Pontos restantes: {restantes} | Reduções: {reducao} / {MAX_REDUCTION}
-            </p>
+                <button
+                  type="button"
+                  className="play-attribute-roll"
+                  onClick={() => rolarAttr(atributo, atributosNum[atributo])}
+                  title={`Rolar ${ATRIBUTO_NOMES[atributo]}`}
+                >
+                  <FaDiceD20 />
+                  <span>Rolar</span>
+                </button>
+              </article>
+            ))}
           </div>
-          {/* === FIM CAIXA DE ATRIBUTOS === */}
-                
-          {/* Perícias */}
-          <PericiasSection
-  atributos={atributosNum}
-  sor={sor}
-  nivel={nivel}
-  fichaId={ficha.ID}
-  nomePersonagem={ficha["Nome do Personagem"]}
-  bonusManual={bonusManual}
-  setBonusManual={(bm) => {
-    setHasChanges(true);
-    setBonusManual(bm);
-  }}
-  pontosDisponiveis={pontosPericia}
-  limitePorPericia={limitePorPericia}
-  registrarRolagem={(rolagem) =>
-    setHistoricoRolagens((prev) => [rolagem, ...prev])
-  }
-/>
+        </section>
 
-          <button
-            onClick={salvarFicha}
-            
-            style={{
-              marginTop: 20,
-              padding: "8px 16px",
-              backgroundColor: "#D4AF37",
-              color: "#000",
-              fontWeight: "bold",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-            }}
-          >
-            Salvar Ficha
-          </button>
-        </div>
-      </div>
-
-      {/* Popup de resultado de atributo */}
-      {rollAttr && (
-        <div
-          style={{
-            position: "fixed",
-            right: 20,
-            bottom: 20,
-            background: "#1a202c",
-            border: "1px solid #D4AF37",
-            borderRadius: 6,
-            padding: "8px 12px",
-            paddingRight: 32,
-            minWidth: 180,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            color: "#D4AF37",
-            zIndex: 1000,
-            fontSize: 13,
+        <PericiasSection
+          atributos={atributosNum}
+          sor={sor}
+          nivel={nivel}
+          fichaId={ficha.ID}
+          nomePersonagem={ficha["Nome do Personagem"]}
+          bonusManual={bonusManual}
+          setBonusManual={(value) => {
+            setBonusManual(value);
+            setHasChanges(true);
           }}
-        >
-          <button
-            onClick={() => setRollAttr(null)}
-            style={{
-              position: "absolute",
-              top: 4,
-              right: 4,
-              background: "transparent",
-              border: "none",
-              color: "#D4AF37",
-              fontSize: 16,
-              cursor: "pointer",
-            }}
-          >
-            ✕
-          </button>
-          <FaDiceD20 style={{ fontSize: 24 }} />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              lineHeight: 1.2,
-              gap: 4,
-              marginLeft: 4,
-            }}
-          >
-            <span style={{ fontWeight: "bold", fontSize: 14 }}>
-              {rollAttr.nome}
-            </span>
-            <span style={{ fontSize: 13, color: "#B2955D" }}>
-              [d20] → {rollAttr.roll}
-            </span>
-            <span
-              style={{
-                fontSize: 15,
-                fontWeight: "bold",
-                marginTop: 2,
-                ...categoryStyles[rollAttr.category],
-              }}
-            >
-              {rollAttr.category}
-            </span>
+          pontosDisponiveis={pontosPericia}
+          limitePorPericia={limitePorPericia}
+          registrarRolagem={(rolagem) =>
+            setHistoricoRolagens((prev) => [rolagem, ...prev])
+          }
+        />
+
+        <section className="play-section-card play-modules-section">
+          <div className="play-section-heading play-modules-heading">
+            <div>
+              <span className="play-eyebrow">ÁREA DE JOGO</span>
+              <h2>Recursos do agente</h2>
+              <p>Combate, habilidades, rituais, inventário e registros em um único lugar.</p>
+            </div>
+          </div>
+
+          <div className="play-modules-layout">
+            <nav className="play-module-nav" aria-label="Recursos da ficha">
+              {MODULES.map((module) => {
+                const Icon = module.icon;
+                const active = activeModule === module.id;
+                return (
+                  <button
+                    type="button"
+                    key={module.id}
+                    className={active ? "is-active" : ""}
+                    onClick={() => setActiveModule(module.id)}
+                  >
+                    <span className="play-module-icon"><Icon size={19} /></span>
+                    <span className="play-module-copy">
+                      <strong>{module.label}</strong>
+                      <small>{module.subtitle}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="play-module-panel">
+              <div className="play-module-panel-title">
+                <span><ActiveModuleIcon size={19} /></span>
+                <div>
+                  <strong>{activeModuleData.label}</strong>
+                  <small>{activeModuleData.subtitle}</small>
+                </div>
+              </div>
+              <div className="play-module-body">{renderModule()}</div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {saveState.type !== "idle" && (
+        <div className={`play-save-toast is-${saveState.type}`}>
+          {saveState.type === "success" ? <CheckCircle2 size={20} /> : saveState.type === "error" ? <AlertCircle size={20} /> : <Save size={20} />}
+          <span>{saveState.message}</span>
+        </div>
+      )}
+
+      {rollAttr && (
+        <div className="play-roll-toast">
+          <button type="button" onClick={() => setRollAttr(null)} aria-label="Fechar resultado">×</button>
+          <div className="play-roll-die"><FaDiceD20 /><strong>{rollAttr.roll}</strong></div>
+          <div className="play-roll-copy">
+            <span>ROLAGEM DE ATRIBUTO</span>
+            <strong>{rollAttr.nome}</strong>
+            <b style={categoryStyles[rollAttr.category]}>{rollAttr.category}</b>
           </div>
         </div>
       )}
