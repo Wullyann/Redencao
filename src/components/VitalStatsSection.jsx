@@ -31,7 +31,9 @@ export default function VitalStatsSection({
 
   const aplicar = (key, delta) => {
     const status = values[key];
-    status.set(Math.max(0, Number(status.atual) + Number(delta)));
+    const maximo = Math.max(Number(status.max) || 0, 0);
+    const novoValor = Math.max(0, Math.min(Number(status.atual) + Number(delta), maximo || Infinity));
+    status.set(novoValor);
   };
 
   const aplicarModificador = (key) => {
@@ -42,19 +44,13 @@ export default function VitalStatsSection({
   };
 
   return (
-    <div className="vital-dashboard">
-      <div className="vital-dashboard-heading">
-        <div>
-          <span>CONDIÇÃO ATUAL</span>
-          <strong>Recursos do agente</strong>
-        </div>
-        <div className="vital-movement">
-          <Footprints size={17} />
-          <div><strong>{deslocamento}m</strong><span>deslocamento</span></div>
-        </div>
+    <section className="agent-resource-strip" aria-label="Recursos do agente">
+      <div className="agent-resource-strip__label">
+        <span>RECURSOS</span>
+        <strong>Condição do agente</strong>
       </div>
 
-      <div className="vital-cards">
+      <div className="agent-resource-strip__items">
         {STATUS.map((item) => {
           const Icon = item.icon;
           const data = values[item.key];
@@ -66,41 +62,57 @@ export default function VitalStatsSection({
           return (
             <article
               key={item.key}
-              className={`vital-card ${critical ? "is-critical" : ""}`}
-              style={{ "--vital-color": item.color, "--vital-percent": `${percent}%` }}
+              className={`agent-resource ${critical ? "is-critical" : ""}`}
+              style={{ "--resource-color": item.color, "--resource-percent": `${percent}%` }}
             >
-              <div className="vital-card-top">
-                <span className="vital-icon"><Icon size={18} /></span>
-                <div><strong>{item.label}</strong><small>{item.short}</small></div>
-                <b>{atual}<em>/ {data.max}</em></b>
+              <div className="agent-resource__identity">
+                <span><Icon size={15} /></span>
+                <div>
+                  <strong>{item.short}</strong>
+                  <small>{item.label}</small>
+                </div>
               </div>
 
-              <div className="vital-progress"><span /></div>
+              <div className="agent-resource__value">
+                <strong>{atual}</strong>
+                <span>/ {data.max}</span>
+              </div>
 
-              <div className="vital-actions">
+              <div className="agent-resource__track"><i /></div>
+
+              <div className="agent-resource__controls">
                 <button type="button" onClick={() => aplicar(item.key, -1)} aria-label={`Diminuir ${item.label}`}>
-                  <Minus size={16} />
+                  <Minus size={13} />
                 </button>
-                <div className="vital-quick-input">
-                  <input
-                    type="number"
-                    value={modificadores[item.key]}
-                    onChange={(event) => setModificadores((current) => ({ ...current, [item.key]: event.target.value }))}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") aplicarModificador(item.key);
-                    }}
-                    placeholder="± valor"
-                  />
-                  <button type="button" onClick={() => aplicarModificador(item.key)}>Aplicar</button>
-                </div>
+                <input
+                  type="number"
+                  value={modificadores[item.key]}
+                  onChange={(event) =>
+                    setModificadores((current) => ({ ...current, [item.key]: event.target.value }))
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") aplicarModificador(item.key);
+                  }}
+                  placeholder="±"
+                  aria-label={`Alterar ${item.label}`}
+                />
+                <button type="button" className="agent-resource__apply" onClick={() => aplicarModificador(item.key)}>
+                  OK
+                </button>
                 <button type="button" onClick={() => aplicar(item.key, 1)} aria-label={`Aumentar ${item.label}`}>
-                  <Plus size={16} />
+                  <Plus size={13} />
                 </button>
               </div>
             </article>
           );
         })}
       </div>
-    </div>
+
+      <div className="agent-resource-strip__movement" title="Deslocamento">
+        <Footprints size={16} />
+        <strong>{deslocamento}m</strong>
+        <span>desloc.</span>
+      </div>
+    </section>
   );
 }

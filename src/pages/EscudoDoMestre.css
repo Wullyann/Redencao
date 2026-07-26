@@ -689,3 +689,29 @@
   .master-agent-card__attributes { gap: 4px; }
   .master-attribute { gap: 3px; padding: 6px 2px; }
 }
+
+/* Eventos de dano no histórico */
+.master-roll--damage {
+  background: linear-gradient(90deg, rgba(255, 100, 48, 0.085), transparent 88%);
+  border-color: rgba(255, 111, 54, 0.16);
+}
+
+.master-roll--damage .master-roll__value {
+  color: #fff7ef;
+  background: linear-gradient(145deg, #ff9a45, #b83c18);
+  box-shadow: 0 7px 20px rgba(178, 52, 20, 0.28);
+}
+
+.master-roll__description em {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #777a75;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.roll-result--dano {
+  color: #ff925b;
+  background: rgba(255, 112, 58, 0.08);
+  border-color: rgba(255, 146, 91, 0.55);
+}

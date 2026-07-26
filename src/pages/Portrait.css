@@ -336,3 +336,11 @@
     transform: scale(0.62);
   }
 }
+
+.portrait-roll.is-damage .portrait-roll-info {
+  background: linear-gradient(105deg, rgba(20, 7, 3, 0.98), rgba(35, 12, 5, 0.94));
+}
+
+.portrait-roll.is-damage .portrait-d20 {
+  filter: drop-shadow(0 0 18px rgba(255, 91, 40, 0.72));
+}

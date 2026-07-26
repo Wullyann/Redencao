@@ -17,6 +17,7 @@ const CORES_SUCESSO = {
   "Sucesso Bom": "#38e7ff",
   "Sucesso Extremo": "#f5fbff",
   "Sucesso Perfeito": "#ffd43b",
+  Dano: "#ff7a3d",
 };
 
 function numero(valor, fallback = 0) {
@@ -292,6 +293,8 @@ export default function Portrait() {
 
   const sucesso = rolagem?.tipoSucesso || "";
   const corSucesso = CORES_SUCESSO[sucesso] || "#ffd43b";
+  const ehDano = sucesso === "Dano" || rolagem?.tipo?.toLowerCase().includes("dano");
+  const textoResultado = ehDano ? "DANO CAUSADO" : sucesso;
 
   return (
     <main className="portrait-page">
@@ -325,13 +328,13 @@ export default function Portrait() {
         {rolagem && (
           <aside
             key={rolagem.eventId}
-            className="portrait-roll"
+            className={`portrait-roll ${ehDano ? "is-damage" : ""}`}
             style={{ "--success-color": corSucesso }}
           >
             <div className="portrait-roll-info">
               <span>{rolagem.tipo}</span>
               <strong>{rolagem.nome}</strong>
-              <em>{sucesso}</em>
+              <em>{textoResultado}</em>
             </div>
             <D20 valor={rolagem.valor} />
           </aside>

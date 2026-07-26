@@ -1,125 +1,155 @@
-// src/components/RolagensSection.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Clock3, Dices, Sparkles, Swords } from "lucide-react";
 
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
 
-const categoryStyles = {
-  Desastre:   { color: "#DC143C", textShadow: "0 0 16px #DC143C, 0 0 24px #FF0000" },
-  Fracasso:   { color: "#8B0000", textShadow: "0 0 6px #8B0000" },
-  Sucesso:    { color: "#00FF00", textShadow: "0 0 12px #00FF00", fontSize: "20px" },
-  "Sucesso Bom":     { color: "#00FFFF", textShadow: "0 0 12px #00FFFF", fontSize: "18px" },
-  "Sucesso Extremo": { color: "#FFFFFF", textShadow: "0 0 8px #00FFFF", fontSize: "18px" },
-  "Sucesso Perfeito":{ color: "#FFD700", textShadow: "0 0 8px #FFD700", fontSize: "22px" },
+const RESULTADO_CLASSES = {
+  Desastre: "is-disaster",
+  Fracasso: "is-failure",
+  Sucesso: "is-success",
+  "Sucesso Bom": "is-good",
+  "Sucesso Extremo": "is-extreme",
+  "Sucesso Perfeito": "is-perfect",
+  Dano: "is-damage",
 };
 
-export default function RolagensSection({ fichaId }) {
-  const [rolagens, setRolagens] = useState([]);
+function normalizar(rolagem, origem = "remoto") {
+  return {
+    id: rolagem.ID || rolagem.localId || `${origem}-${Math.random().toString(36).slice(2)}`,
+    horario: rolagem.Horario || rolagem["Horário"] || rolagem.horario || "",
+    personagem:
+      rolagem["Nome do Personagem"] || rolagem.personagem || "Personagem",
+    tipo: rolagem.Tipo || rolagem.tipo || "Rolagem",
+    nome:
+      rolagem.Nome || rolagem.nome || rolagem.pericia || "Sem nome",
+    valor: rolagem.Valor ?? rolagem.valor ?? "—",
+    resultado:
+      rolagem["Tipo de Sucesso"] || rolagem.tipoSucesso || "",
+    formula: rolagem["Fórmula"] || rolagem.Formula || rolagem.formula || "",
+    origem,
+  };
+}
+
+function assinatura(rolagem) {
+  return [
+    rolagem.horario,
+    rolagem.personagem,
+    rolagem.tipo,
+    rolagem.nome,
+    rolagem.valor,
+    rolagem.resultado,
+  ].join("|");
+}
+
+export default function RolagensSection({ fichaId, rolagensLocais = [] }) {
+  const [rolagensRemotas, setRolagensRemotas] = useState([]);
 
   useEffect(() => {
-    if (!fichaId) return;
+    if (!fichaId) return undefined;
+    let ativo = true;
 
-    function fetchRolagens() {
-      fetch(`${BASE_URL}?sheet=Rolagens`)
-        .then((res) => res.json())
+    const carregarRolagens = () => {
+      fetch(`${BASE_URL}?sheet=Rolagens&_=${Date.now()}`, { cache: "no-store" })
+        .then((resposta) => resposta.json())
         .then((dados) => {
-          const filtradas = dados
-            .filter((r) => r["ID da Ficha"] === fichaId)
-            .sort((a, b) => (b.Horario || "").localeCompare(a.Horario));
-          setRolagens(filtradas);
+          if (!ativo) return;
+          const filtradas = (Array.isArray(dados) ? dados : [])
+            .filter((rolagem) => String(rolagem["ID da Ficha"]) === String(fichaId))
+            .sort((a, b) =>
+              String(b.Horario || b["Horário"] || "").localeCompare(
+                String(a.Horario || a["Horário"] || "")
+              )
+            );
+          setRolagensRemotas(filtradas);
         })
-        .catch((err) => console.error("Erro ao carregar rolagens:", err));
-    }
+        .catch((erro) => console.error("Erro ao carregar rolagens:", erro));
+    };
 
-    // Busca inicial e depois a cada 10 segundos
-    fetchRolagens();
-    const intervalo = setInterval(fetchRolagens, 10000);
-    return () => clearInterval(intervalo);
+    carregarRolagens();
+    const intervalo = window.setInterval(carregarRolagens, 4000);
+    return () => {
+      ativo = false;
+      window.clearInterval(intervalo);
+    };
   }, [fichaId]);
 
+  const rolagens = useMemo(() => {
+    const locais = rolagensLocais.map((rolagem) => normalizar(rolagem, "local"));
+    const remotas = rolagensRemotas.map((rolagem) => normalizar(rolagem, "remoto"));
+    const vistas = new Set();
+
+    return [...locais, ...remotas].filter((rolagem) => {
+      const chave = assinatura(rolagem);
+      if (vistas.has(chave)) return false;
+      vistas.add(chave);
+      return true;
+    });
+  }, [rolagensLocais, rolagensRemotas]);
+
   return (
-    <>
-      {/* Bloco de <style> para customizar o scrollbar */}
-      <style>
-        {`
-        /* === WebKit-based browsers (Chrome, Safari, Edge) === */
-        .rolagens-container::-webkit-scrollbar {
-          width: 8px;               /* espessura da scrollbar */
-        }
-        .rolagens-container::-webkit-scrollbar-track {
-          background: transparent;  /* trilha (fundo) transparente */
-        }
-        .rolagens-container::-webkit-scrollbar-thumb {
-          background-color: #444;   /* cor do “polegar” (thumb) */
-          border-radius: 4px;       /* cantos arredondados */
-          border: 2px solid #111;   /* borda escura ao redor */
-        }
-        .rolagens-container::-webkit-scrollbar-thumb:hover {
-          background-color: #555;   /* cor ao passar o mouse */
-        }
+    <section className="roll-history">
+      <header className="roll-history__header">
+        <div>
+          <span><Dices size={18} /></span>
+          <div>
+            <small>REGISTRO DA SESSÃO</small>
+            <strong>Histórico de rolagens e danos</strong>
+          </div>
+        </div>
+        <b>{rolagens.length}</b>
+      </header>
 
-        /* === Firefox === */
-        .rolagens-container {
-          scrollbar-width: thin;            /* scrollbar mais fina */
-          scrollbar-color: #444 transparent;/* thumb #444, trilha transparente */
-        }
-        `}
-      </style>
+      <div className="roll-history__list">
+        {rolagens.length ? (
+          rolagens.map((rolagem, index) => {
+            const ehDano =
+              rolagem.resultado === "Dano" ||
+              rolagem.tipo.toLowerCase().includes("dano");
+            const ehRitual = rolagem.tipo.toLowerCase().includes("ritual");
+            const Icon = ehDano ? (ehRitual ? Sparkles : Swords) : Dices;
+            const classeResultado =
+              RESULTADO_CLASSES[rolagem.resultado] || "is-neutral";
 
-      <div
-        style={{
-          background: "#111",
-          border: "1px solid #D4AF37",
-          borderRadius: 8,
-          padding: 16,
-          color: "#D4AF37",
-        }}
-      >
-        <h2 style={{ fontSize: 20, marginBottom: 16 }}>📜 Histórico de Rolagens</h2>
+            return (
+              <article
+                className={`roll-history__item ${ehDano ? "is-damage-event" : ""}`}
+                key={`${rolagem.id}-${index}`}
+              >
+                <div className="roll-history__value">
+                  <Icon size={15} />
+                  <strong>{rolagem.valor}</strong>
+                </div>
 
-        {rolagens.length === 0 ? (
-          <p style={{ color: "#999" }}>Nenhuma rolagem registrada.</p>
+                <div className="roll-history__content">
+                  <div className="roll-history__topline">
+                    <strong>{rolagem.nome}</strong>
+                    <span><Clock3 size={11} /> {rolagem.horario || "—"}</span>
+                  </div>
+
+                  <p>
+                    <span>{rolagem.tipo}</span>
+                    {rolagem.formula && <em>{rolagem.formula}</em>}
+                  </p>
+
+                  <div className="roll-history__footer">
+                    <span className={`roll-history__result ${classeResultado}`}>
+                      {ehDano ? `${rolagem.valor} de dano` : rolagem.resultado || "Resultado"}
+                    </span>
+                    <small>{rolagem.personagem}</small>
+                  </div>
+                </div>
+              </article>
+            );
+          })
         ) : (
-          <div
-            className="rolagens-container"
-            style={{
-              maxHeight: "400px",   // altura máxima do bloco (pode ajustar)
-              overflowY: "auto",    // rolagem vertical habilitada
-              paddingRight: 8,      // espaço para evitar sobrepor o texto
-            }}
-          >
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {rolagens.map((r, i) => (
-                <li
-                  key={i}
-                  style={{
-                    marginBottom: 14,
-                    padding: 12,
-                    background: "#1a1a1a",
-                    border: "1px solid #333",
-                    borderRadius: 6,
-                  }}
-                >
-                  <div style={{ fontSize: 12, color: "#aaa", marginBottom: 6 }}>
-                    {r.Horario} — <em>{r["Nome do Personagem"]}</em>
-                  </div>
-                  <div style={{ fontSize: 15, marginBottom: 6 }}>
-                    <strong>{r.Nome}</strong> ({r.Tipo}): <strong>{r.Valor}</strong>
-                  </div>
-                  <div
-                    style={{
-                      ...categoryStyles[r["Tipo de Sucesso"]],
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {r["Tipo de Sucesso"]}
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <div className="roll-history__empty">
+            <Dices size={30} />
+            <strong>Nenhuma rolagem registrada</strong>
+            <span>Ataques, rituais, perícias e atributos aparecerão aqui.</span>
           </div>
         )}
       </div>
-    </>
+    </section>
   );
 }

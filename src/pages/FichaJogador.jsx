@@ -420,12 +420,13 @@ export default function FichaJogador() {
 
     setHistoricoRolagens((prev) => [
       {
-        horario: agora,
-        personagem: ficha["Nome do Personagem"] || "Desconhecido",
-        pericia: nome,
-        valor: roll,
-        tipoSucesso: category,
-        estilo: categoryStyles[category] || {},
+        localId: `atributo-${Date.now()}`,
+        Horario: agora,
+        "Nome do Personagem": ficha["Nome do Personagem"] || "Desconhecido",
+        Tipo: "Atributo",
+        Nome: nome,
+        Valor: roll,
+        "Tipo de Sucesso": category,
       },
       ...prev,
     ]);
@@ -483,16 +484,34 @@ export default function FichaJogador() {
           />
         );
       case "Rituais":
-        return <RituaisSection fichaId={ficha.ID} nivel={nivel} intelecto={atributosNum.INT} />;
+        return (
+          <RituaisSection
+            fichaId={ficha.ID}
+            nivel={nivel}
+            intelecto={atributosNum.INT}
+            nomePersonagem={ficha["Nome do Personagem"]}
+            registrarRolagem={(rolagem) =>
+              setHistoricoRolagens((prev) => [rolagem, ...prev])
+            }
+          />
+        );
       case "Inventário":
         return <InventarioSection fichaId={ficha.ID} />;
       case "Rolagens":
-        return <RolagensSection fichaId={ficha.ID} />;
+        return <RolagensSection fichaId={ficha.ID} rolagensLocais={historicoRolagens} />;
       case "Carteira":
         return <CarteiraSection fichaId={ficha.ID} />;
       case "Combate":
       default:
-        return <CombatEntryForm fichaId={ficha.ID} />;
+        return (
+          <CombatEntryForm
+            fichaId={ficha.ID}
+            nomePersonagem={ficha["Nome do Personagem"]}
+            registrarRolagem={(rolagem) =>
+              setHistoricoRolagens((prev) => [rolagem, ...prev])
+            }
+          />
+        );
     }
   };
 
@@ -556,31 +575,6 @@ export default function FichaJogador() {
             }}
           />
 
-          <VitalStatsSection
-            pvAtual={pvAtual}
-            pvMax={pvMax}
-            peAtual={peAtual}
-            peMax={peMax}
-            sanAtual={sanAtual}
-            sanMax={sanMax}
-            setPvAtual={(value) => {
-              setPvAtual(value);
-              setHasChanges(true);
-              setStatusAlterado(true);
-            }}
-            setPeAtual={(value) => {
-              setPeAtual(value);
-              setHasChanges(true);
-              setStatusAlterado(true);
-            }}
-            setSanAtual={(value) => {
-              setSanAtual(value);
-              setHasChanges(true);
-              setStatusAlterado(true);
-            }}
-            agi={atributosNum.AGI}
-            vig={atributosNum.VIG}
-          />
         </section>
 
         <section className="play-section-card play-attributes-section">
@@ -636,23 +630,62 @@ export default function FichaJogador() {
           </div>
         </section>
 
-        <PericiasSection
-          atributos={atributosNum}
-          sor={sor}
-          nivel={nivel}
-          fichaId={ficha.ID}
-          nomePersonagem={ficha["Nome do Personagem"]}
-          bonusManual={bonusManual}
-          setBonusManual={(value) => {
-            setBonusManual(value);
-            setHasChanges(true);
-          }}
-          pontosDisponiveis={pontosPericia}
-          limitePorPericia={limitePorPericia}
-          registrarRolagem={(rolagem) =>
-            setHistoricoRolagens((prev) => [rolagem, ...prev])
-          }
-        />
+        <section className="play-skills-cluster">
+          <VitalStatsSection
+            pvAtual={pvAtual}
+            pvMax={pvMax}
+            peAtual={peAtual}
+            peMax={peMax}
+            sanAtual={sanAtual}
+            sanMax={sanMax}
+            setPvAtual={(value) => {
+              setPvAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            setPeAtual={(value) => {
+              setPeAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            setSanAtual={(value) => {
+              setSanAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            agi={atributosNum.AGI}
+            vig={atributosNum.VIG}
+          />
+
+          <PericiasSection
+            atributos={atributosNum}
+            sor={sor}
+            nivel={nivel}
+            fichaId={ficha.ID}
+            nomePersonagem={ficha["Nome do Personagem"]}
+            bonusManual={bonusManual}
+            setBonusManual={(value) => {
+              setBonusManual(value);
+              setHasChanges(true);
+            }}
+            pontosDisponiveis={pontosPericia}
+            limitePorPericia={limitePorPericia}
+            registrarRolagem={(rolagem) =>
+              setHistoricoRolagens((prev) => [
+                {
+                  localId: `pericia-${Date.now()}`,
+                  Horario: rolagem.horario,
+                  "Nome do Personagem": rolagem.personagem,
+                  Tipo: "Perícia",
+                  Nome: rolagem.pericia,
+                  Valor: rolagem.valor,
+                  "Tipo de Sucesso": rolagem.tipoSucesso,
+                },
+                ...prev,
+              ])
+            }
+          />
+        </section>
 
         <section className="play-section-card play-modules-section">
           <div className="play-section-heading play-modules-heading">

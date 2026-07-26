@@ -1,6 +1,7 @@
 // src/components/CombatEntryForm.jsx
 import React, { useState, useEffect } from "react";
 import { FaDiceD20 } from "react-icons/fa";
+import { publicarRolagemPortrait } from "../utils/portraitRealtime";
 
 const BASE_URL =
   "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
@@ -41,7 +42,7 @@ function parseDamage(formula) {
   }
 }
 
-export default function CombatEntryForm({ fichaId }) {
+export default function CombatEntryForm({ fichaId, nomePersonagem, registrarRolagem }) {
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
@@ -77,6 +78,51 @@ export default function CombatEntryForm({ fichaId }) {
   const [expandedId, setExpandedId] = useState(null);
   const [popup, setPopup] = useState(null);
   const [freeRoll, setFreeRoll] = useState("");
+
+  const registrarDano = ({ nome, total, formula, origem = "Ataque" }) => {
+    const horario = new Date().toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    const tipo = origem === "Ritual" ? "Dano de Ritual" : "Dano de Ataque";
+    const evento = {
+      localId: `dano-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      Horario: horario,
+      "Nome do Personagem": nomePersonagem || "Personagem",
+      Tipo: tipo,
+      Nome: nome || "Ataque sem nome",
+      Valor: total,
+      "Tipo de Sucesso": "Dano",
+      Dano: total,
+      "Fórmula": formula,
+    };
+
+    registrarRolagem?.(evento);
+    publicarRolagemPortrait({
+      fichaId,
+      tipo,
+      nome: evento.Nome,
+      valor: total,
+      tipoSucesso: "Dano",
+    });
+
+    fetch(BASE_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        acao: "salvarRolagem",
+        "ID da Ficha": fichaId,
+        Horario: horario,
+        "Nome do Personagem": nomePersonagem || "Personagem",
+        Tipo: tipo,
+        Nome: evento.Nome,
+        Valor: total,
+        "Tipo de Sucesso": "Dano",
+        Dano: total,
+        "Fórmula": formula || "",
+      }),
+    }).catch((error) => console.error("Erro ao registrar dano:", error));
+  };
 
   const salvarAtaque = async (entry) => {
     const form = new URLSearchParams();
@@ -149,14 +195,15 @@ export default function CombatEntryForm({ fichaId }) {
         )
       );
     }
-    setPopup({ name: entry.name, rolls, final: total });
+    setPopup({ name: entry.name, rolls, final: total, formula: entry.damage, tipo: "Dano de Ataque" });
+    registrarDano({ nome: entry.name, total, formula: entry.damage, origem: "Ataque" });
   };
 
   const doFreeRoll = () => {
     const formula = freeRoll.trim();
     if (!formula) return;
     const { rolls, total } = parseDamage(formula);
-    setPopup({ name: `Rolagem livre (${formula})`, rolls, final: total });
+    setPopup({ name: `Rolagem livre (${formula})`, rolls, final: total, formula, tipo: "Rolagem livre" });
     setFreeRoll("");
   };
 
@@ -379,7 +426,7 @@ export default function CombatEntryForm({ fichaId }) {
           <div>
             <div style={popupTitle}>{popup.name}</div>
             <div style={popupRolls}>Rolagens: {popup.rolls.join(", ")}</div>
-            <div style={popupTotal}>Total: {popup.final}</div>
+            <div style={popupTotal}>{popup.tipo === "Dano de Ataque" ? "Dano causado" : "Total"}: {popup.final}</div>
           </div>
         </div>
       )}

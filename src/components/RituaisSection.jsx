@@ -1,6 +1,7 @@
 // src/components/RituaisSection.jsx
 import React, { useState, useEffect } from 'react';
 import { FaDiceD20, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
+import { publicarRolagemPortrait } from '../utils/portraitRealtime';
 
 const ELEMENTOS = ['Sangue', 'Energia', 'Conhecimento', 'Morte', 'Medo'];
 const EXECUCOES = ['Livre', 'Padrão', 'Movimento', 'Completa'];
@@ -16,11 +17,11 @@ const cores = {
   Medo: '#191970'
 };
 
-export default function RituaisSection({ nivel, intelecto, fichaId }) {
+export default function RituaisSection({ nivel, intelecto, fichaId, nomePersonagem, registrarRolagem }) {
   // State hooks
   const [rituais, setRituais] = useState([]);
   const [expanded, setExpanded] = useState(null);
-  const [popup, setPopup] = useState({ idx: null, type: '', rolls: [], total: 0 });
+  const [popup, setPopup] = useState({ ritual: null, type: '', rolls: [], total: 0 });
   const [pe, setPe] = useState('0');
   const [circulo, setCirculo] = useState(1);
   const [busca, setBusca] = useState('');
@@ -69,19 +70,66 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
       .catch(console.error);
   }, [fichaId]);
 
-  // Função para rolar dados
-  function rollDado(formula, idx, type) {
+  const registrarDanoRitual = ({ ritual, versao, formula, total }) => {
+    const horario = new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const nomeBase = ritual?.['Nome do Ritual'] || 'Ritual sem nome';
+    const nomeExibicao = versao && versao !== 'Normal' ? `${nomeBase} — ${versao}` : nomeBase;
+    const evento = {
+      localId: `ritual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      Horario: horario,
+      'Nome do Personagem': nomePersonagem || 'Personagem',
+      Tipo: 'Dano de Ritual',
+      Nome: nomeExibicao,
+      Valor: total,
+      'Tipo de Sucesso': 'Dano',
+      Dano: total,
+      'Fórmula': formula,
+    };
+
+    registrarRolagem?.(evento);
+    publicarRolagemPortrait({
+      fichaId,
+      tipo: 'Dano de Ritual',
+      nome: nomeExibicao,
+      valor: total,
+      tipoSucesso: 'Dano',
+    });
+
+    fetch(BASE_URL, {
+      method: 'POST',
+      body: new URLSearchParams({
+        acao: 'salvarRolagem',
+        'ID da Ficha': fichaId,
+        Horario: horario,
+        'Nome do Personagem': nomePersonagem || 'Personagem',
+        Tipo: 'Dano de Ritual',
+        Nome: nomeExibicao,
+        Valor: total,
+        'Tipo de Sucesso': 'Dano',
+        Dano: total,
+        'Fórmula': formula || '',
+      }),
+    }).catch(error => console.error('Erro ao registrar dano do ritual:', error));
+  };
+
+  // Rola o dano e registra o nome do ritual no histórico da sessão.
+  function rollDado(formula, ritual, type) {
     try {
       const [dados, bonus = ''] = formula.split('+');
       const [q, fv] = dados.includes('d') ? dados.split('d') : ['1', dados];
       const qty = parseInt(q) || 1;
       const fac = parseInt(fv) || 6;
-      const b = parseInt(bonus) || 0;
+      const bonusNumerico = parseInt(bonus) || 0;
       const rolls = Array.from({ length: qty }, () => Math.floor(Math.random() * fac) + 1);
-      const total = rolls.reduce((a, b) => a + b, 0) + b;
-      setPopup({ idx, type, rolls, total });
+      const total = rolls.reduce((soma, valor) => soma + valor, 0) + bonusNumerico;
+      setPopup({ ritual, type, rolls, total });
+      registrarDanoRitual({ ritual, versao: type, formula, total });
     } catch {
-      setPopup({ idx: null, type: '', rolls: [], total: 0 });
+      setPopup({ ritual: null, type: '', rolls: [], total: 0 });
     }
   }
 
@@ -570,7 +618,7 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
                     <div>
                       {r.Dano}
                       <FaDiceD20
-                        onClick={() => rollDado(r.Dano, i, 'Normal')}
+                        onClick={() => rollDado(r.Dano, r, 'Normal')}
                         style={{ cursor: 'pointer', marginLeft: 4 }}
                       />
                     </div>
@@ -583,7 +631,7 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
                     <div>
                       {r['Discente Dano']}
                       <FaDiceD20
-                        onClick={() => rollDado(r['Discente Dano'], i, 'Discente')}
+                        onClick={() => rollDado(r['Discente Dano'], r, 'Discente')}
                         style={{ cursor: 'pointer', marginLeft: 4 }}
                       />
                     </div>
@@ -596,7 +644,7 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
                     <div>
                       {r['Verdadeira Dano']}
                       <FaDiceD20
-                        onClick={() => rollDado(r['Verdadeira Dano'], i, 'Verdadeira')}
+                        onClick={() => rollDado(r['Verdadeira Dano'], r, 'Verdadeira')}
                         style={{ cursor: 'pointer', marginLeft: 4 }}
                       />
                     </div>
@@ -696,14 +744,14 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
       })}
 
       {/* === Popup de resultado de rolagens === */}
-      {popup.idx !== null && (
+      {popup.ritual && (
         <div
           style={{
             position: 'fixed',
             bottom: 20,
             right: 20,
             background: '#000',
-            border: `2px solid ${cores[rituais[popup.idx]?.Elemento]}`,
+            border: `2px solid ${cores[popup.ritual?.Elemento]}`,
             borderRadius: 8,
             padding: 12,
             color: '#D4AF37',
@@ -712,7 +760,7 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
           }}
         >
           <button
-            onClick={() => setPopup({ idx: null, type: '', rolls: [], total: 0 })}
+            onClick={() => setPopup({ ritual: null, type: '', rolls: [], total: 0 })}
             style={{
               float: 'right',
               background: 'none',
@@ -726,8 +774,8 @@ export default function RituaisSection({ nivel, intelecto, fichaId }) {
           </button>
 
           <div style={{ marginTop: 6, fontSize: 14 }}>
-            <strong style={{ color: cores[rituais[popup.idx]?.Elemento] }}>
-              {rituais[popup.idx]?.['Nome do Ritual']}
+            <strong style={{ color: cores[popup.ritual?.Elemento] }}>
+              {popup.ritual?.['Nome do Ritual']}
               {popup.type !== 'Normal' && ` - ${popup.type}`}
             </strong>
             <br />
