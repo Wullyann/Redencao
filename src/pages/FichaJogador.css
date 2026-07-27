@@ -1104,225 +1104,6 @@
   min-width: 0;
 }
 
-/* =========================================================
-   Faixa compacta de recursos + histórico de dano
-   ========================================================= */
-.play-hero-card {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.play-hero-card .character-identity {
-  padding-right: 0;
-  border-right: 0;
-}
-
-.play-skills-cluster {
-  min-width: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.agent-resource-strip {
-  --resource-strip-bg: rgba(15, 16, 14, 0.98);
-  min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 12px;
-  border: 1px solid rgba(229, 184, 73, 0.18);
-  border-radius: 14px;
-  background:
-    linear-gradient(90deg, rgba(229, 184, 73, 0.045), transparent 28%),
-    var(--resource-strip-bg);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
-}
-
-.agent-resource-strip__label {
-  min-width: 118px;
-  display: grid;
-  gap: 2px;
-  padding-right: 12px;
-  border-right: 1px solid rgba(229, 184, 73, 0.12);
-}
-
-.agent-resource-strip__label span {
-  color: #8e7531;
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-}
-
-.agent-resource-strip__label strong {
-  color: #ddd7c8;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.agent-resource-strip__items {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(185px, 1fr));
-  gap: 8px;
-}
-
-.agent-resource {
-  position: relative;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: auto auto minmax(92px, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.065);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.022);
-}
-
-.agent-resource.is-critical {
-  border-color: rgba(255, 66, 93, 0.26);
-  box-shadow: inset 0 0 18px rgba(255, 66, 93, 0.055);
-}
-
-.agent-resource__identity {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.agent-resource__identity > span {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  color: var(--resource-color);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--resource-color) 11%, transparent);
-}
-
-.agent-resource__identity > div {
-  display: grid;
-  line-height: 1;
-}
-
-.agent-resource__identity strong {
-  color: #ece8de;
-  font-size: 10px;
-}
-
-.agent-resource__identity small {
-  color: #696c65;
-  font-size: 7px;
-}
-
-.agent-resource__value {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  white-space: nowrap;
-}
-
-.agent-resource__value strong {
-  color: #fff;
-  font-size: 17px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-
-.agent-resource__value span {
-  color: #666a62;
-  font-size: 8px;
-}
-
-.agent-resource__track {
-  min-width: 66px;
-  height: 5px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.065);
-}
-
-.agent-resource__track i {
-  width: var(--resource-percent);
-  height: 100%;
-  display: block;
-  border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--resource-color) 68%, black), var(--resource-color));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--resource-color) 32%, transparent);
-  transition: width 180ms ease;
-}
-
-.agent-resource__controls {
-  display: grid;
-  grid-template-columns: 25px 34px 29px 25px;
-  gap: 3px;
-}
-
-.agent-resource__controls button,
-.agent-resource__controls input {
-  height: 25px;
-  min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 7px;
-  color: #a8aaa3;
-  background: rgba(255, 255, 255, 0.035);
-  outline: none;
-}
-
-.agent-resource__controls button {
-  display: grid;
-  place-items: center;
-  padding: 0;
-  cursor: pointer;
-}
-
-.agent-resource__controls button:hover {
-  color: var(--resource-color);
-  border-color: color-mix(in srgb, var(--resource-color) 28%, transparent);
-}
-
-.agent-resource__controls input {
-  width: 34px;
-  padding: 0 3px;
-  text-align: center;
-  font-size: 9px;
-}
-
-.agent-resource__controls input::-webkit-inner-spin-button,
-.agent-resource__controls input::-webkit-outer-spin-button {
-  margin: 0;
-  appearance: none;
-}
-
-.agent-resource__apply {
-  font-size: 7px;
-  font-weight: 900;
-}
-
-.agent-resource-strip__movement {
-  min-width: 66px;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: var(--play-gold);
-}
-
-.agent-resource-strip__movement strong {
-  font-size: 15px;
-}
-
-.agent-resource-strip__movement span {
-  grid-column: 1 / -1;
-  color: #666a62;
-  font-size: 7px;
-  font-weight: 800;
-  text-align: center;
-  text-transform: uppercase;
-}
-
 /* Histórico da própria ficha */
 .roll-history {
   overflow: hidden;
@@ -1533,56 +1314,180 @@
   font-size: 8px;
 }
 
+/* =========================================================
+   Alteração 12 — módulos à esquerda das perícias
+   ========================================================= */
+
+/* O topo volta a exibir personagem e recursos vitais lado a lado. */
+@media (min-width: 1221px) {
+  .play-hero-card {
+    grid-template-columns: minmax(420px, 0.9fr) minmax(600px, 1.35fr);
+  }
+
+  .play-hero-card .character-identity {
+    padding-right: 24px;
+    border-right: 1px solid rgba(229, 184, 73, 0.12);
+  }
+}
+
+/* Recursos do agente à esquerda e perícias à direita. */
+.play-agent-workspace {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(500px, 0.78fr) minmax(680px, 1.22fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.play-agent-workspace > * {
+  min-width: 0;
+}
+
+.play-skills-column {
+  min-width: 0;
+}
+
+.play-skills-column > * {
+  margin-top: 0 !important;
+}
+
+.play-modules-section {
+  min-width: 0;
+  align-self: start;
+  overflow: hidden;
+}
+
+.play-modules-heading {
+  margin-bottom: 14px;
+}
+
+.play-modules-heading h2 {
+  font-size: 23px;
+}
+
+/* A seleção continua fina; somente a categoria ativa aparece no painel. */
+.play-modules-layout {
+  min-width: 0;
+  grid-template-columns: 138px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.play-module-nav {
+  min-width: 0;
+  position: sticky;
+  top: 88px;
+}
+
+.play-module-nav > button {
+  min-height: 48px;
+  grid-template-columns: 31px minmax(0, 1fr);
+  gap: 7px;
+  padding: 7px;
+  border-radius: 10px;
+}
+
+.play-module-icon {
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+}
+
+.play-module-copy strong {
+  font-size: 9px;
+}
+
+.play-module-copy small {
+  display: none;
+}
+
+.play-module-panel {
+  min-width: 0;
+  min-height: 520px;
+  padding: 13px;
+  border-radius: 14px;
+}
+
+.play-module-panel-title {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+
+.play-module-body,
+.play-module-view {
+  min-width: 0;
+}
+
+.play-module-view[hidden] {
+  display: none !important;
+}
+
+/* Tabelas e formulários podem rolar dentro do painel estreito sem quebrar a página. */
+.play-module-body {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(229, 184, 73, 0.28) transparent;
+}
+
+@media (max-width: 1320px) {
+  .play-agent-workspace {
+    grid-template-columns: minmax(440px, 0.82fr) minmax(620px, 1.18fr);
+  }
+
+  .play-modules-layout {
+    grid-template-columns: 118px minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 1180px) {
-  .agent-resource-strip {
-    grid-template-columns: 1fr auto;
+  .play-hero-card {
+    grid-template-columns: 1fr;
   }
-  .agent-resource-strip__label {
-    display: none;
+
+  .play-hero-card .character-identity {
+    padding: 0 0 23px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(229, 184, 73, 0.12);
   }
-  .agent-resource-strip__items {
-    grid-template-columns: repeat(3, minmax(170px, 1fr));
-    overflow-x: auto;
+
+  .play-agent-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .play-modules-layout {
+    grid-template-columns: 165px minmax(0, 1fr);
+  }
+
+  .play-module-nav {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
   }
 }
 
 @media (max-width: 760px) {
-  .agent-resource-strip {
+  .play-modules-layout {
     grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 9px;
   }
-  .agent-resource-strip__items {
-    grid-template-columns: 1fr;
-    overflow: visible;
+
+  .play-module-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .agent-resource-strip__movement {
-    display: flex;
-    justify-content: flex-end;
+
+  .play-module-nav > button {
+    grid-template-columns: 30px minmax(0, 1fr);
   }
-  .agent-resource-strip__movement span {
-    grid-column: auto;
-  }
-  .agent-resource {
-    grid-template-columns: minmax(82px, auto) auto minmax(62px, 1fr) auto;
+
+  .play-module-panel {
+    min-height: 420px;
   }
 }
 
-@media (max-width: 460px) {
-  .agent-resource {
-    grid-template-columns: minmax(72px, auto) auto 1fr;
-  }
-  .agent-resource__track {
-    display: none;
-  }
-  .agent-resource__controls {
-    grid-template-columns: 24px 32px 28px 24px;
-  }
-  .roll-history__item {
-    grid-template-columns: 42px minmax(0, 1fr);
-  }
-  .roll-history__value {
-    width: 40px;
-    height: 40px;
+@media (max-width: 480px) {
+  .play-module-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+

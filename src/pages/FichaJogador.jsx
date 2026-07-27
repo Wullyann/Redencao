@@ -575,6 +575,31 @@ export default function FichaJogador() {
             }}
           />
 
+          <VitalStatsSection
+            pvAtual={pvAtual}
+            pvMax={pvMax}
+            peAtual={peAtual}
+            peMax={peMax}
+            sanAtual={sanAtual}
+            sanMax={sanMax}
+            setPvAtual={(value) => {
+              setPvAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            setPeAtual={(value) => {
+              setPeAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            setSanAtual={(value) => {
+              setSanAtual(value);
+              setHasChanges(true);
+              setStatusAlterado(true);
+            }}
+            agi={atributosNum.AGI}
+            vig={atributosNum.VIG}
+          />
         </section>
 
         <section className="play-section-card play-attributes-section">
@@ -590,7 +615,12 @@ export default function FichaJogador() {
             </div>
           </div>
 
-          {erroAtributos && <div className="play-inline-error"><AlertCircle size={17} />{erroAtributos}</div>}
+          {erroAtributos && (
+            <div className="play-inline-error">
+              <AlertCircle size={17} />
+              {erroAtributos}
+            </div>
+          )}
 
           <div className="play-attributes-grid">
             {ATRIBUTOS.map((atributo) => (
@@ -630,115 +660,94 @@ export default function FichaJogador() {
           </div>
         </section>
 
-        <section className="play-skills-cluster">
-          <VitalStatsSection
-            pvAtual={pvAtual}
-            pvMax={pvMax}
-            peAtual={peAtual}
-            peMax={peMax}
-            sanAtual={sanAtual}
-            sanMax={sanMax}
-            setPvAtual={(value) => {
-              setPvAtual(value);
-              setHasChanges(true);
-              setStatusAlterado(true);
-            }}
-            setPeAtual={(value) => {
-              setPeAtual(value);
-              setHasChanges(true);
-              setStatusAlterado(true);
-            }}
-            setSanAtual={(value) => {
-              setSanAtual(value);
-              setHasChanges(true);
-              setStatusAlterado(true);
-            }}
-            agi={atributosNum.AGI}
-            vig={atributosNum.VIG}
-          />
-
-          <PericiasSection
-            atributos={atributosNum}
-            sor={sor}
-            nivel={nivel}
-            fichaId={ficha.ID}
-            nomePersonagem={ficha["Nome do Personagem"]}
-            bonusManual={bonusManual}
-            setBonusManual={(value) => {
-              setBonusManual(value);
-              setHasChanges(true);
-            }}
-            pontosDisponiveis={pontosPericia}
-            limitePorPericia={limitePorPericia}
-            registrarRolagem={(rolagem) =>
-              setHistoricoRolagens((prev) => [
-                {
-                  localId: `pericia-${Date.now()}`,
-                  Horario: rolagem.horario,
-                  "Nome do Personagem": rolagem.personagem,
-                  Tipo: "Perícia",
-                  Nome: rolagem.pericia,
-                  Valor: rolagem.valor,
-                  "Tipo de Sucesso": rolagem.tipoSucesso,
-                },
-                ...prev,
-              ])
-            }
-          />
-        </section>
-
-        <section className="play-section-card play-modules-section">
-          <div className="play-section-heading play-modules-heading">
-            <div>
-              <span className="play-eyebrow">ÁREA DE JOGO</span>
-              <h2>Recursos do agente</h2>
-              <p>Combate, habilidades, rituais, inventário e registros em um único lugar.</p>
+        <section className="play-agent-workspace">
+          <section className="play-section-card play-modules-section">
+            <div className="play-section-heading play-modules-heading">
+              <div>
+                <span className="play-eyebrow">ÁREA DE JOGO</span>
+                <h2>Recursos do agente</h2>
+                <p>Selecione uma categoria para abrir seu conteúdo.</p>
+              </div>
             </div>
-          </div>
 
-          <div className="play-modules-layout">
-            <nav className="play-module-nav" aria-label="Recursos da ficha">
-              {MODULES.map((module) => {
-                const Icon = module.icon;
-                const active = activeModule === module.id;
-                return (
-                  <button
-                    type="button"
-                    key={module.id}
-                    className={active ? "is-active" : ""}
-                    onClick={() => setActiveModule(module.id)}
-                  >
-                    <span className="play-module-icon"><Icon size={19} /></span>
-                    <span className="play-module-copy">
-                      <strong>{module.label}</strong>
-                      <small>{module.subtitle}</small>
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="play-modules-layout">
+              <nav className="play-module-nav" aria-label="Recursos da ficha">
+                {MODULES.map((module) => {
+                  const Icon = module.icon;
+                  const active = activeModule === module.id;
 
-            <div className="play-module-panel">
-              <div className="play-module-panel-title">
-                <span><ActiveModuleIcon size={19} /></span>
-                <div>
-                  <strong>{activeModuleData.label}</strong>
-                  <small>{activeModuleData.subtitle}</small>
+                  return (
+                    <button
+                      type="button"
+                      key={module.id}
+                      className={active ? "is-active" : ""}
+                      onClick={() => setActiveModule(module.id)}
+                      aria-pressed={active}
+                    >
+                      <span className="play-module-icon"><Icon size={18} /></span>
+                      <span className="play-module-copy">
+                        <strong>{module.label}</strong>
+                        <small>{module.subtitle}</small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              <div className="play-module-panel">
+                <div className="play-module-panel-title">
+                  <span><ActiveModuleIcon size={19} /></span>
+                  <div>
+                    <strong>{activeModuleData.label}</strong>
+                    <small>{activeModuleData.subtitle}</small>
+                  </div>
+                </div>
+
+                <div className="play-module-body">
+                  {MODULES.map((module) => (
+                    <div
+                      key={module.id}
+                      className="play-module-view"
+                      hidden={activeModule !== module.id}
+                      aria-hidden={activeModule !== module.id}
+                    >
+                      {renderModule(module.id)}
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="play-module-body">
-                {MODULES.map((module) => (
-                  <div
-                    key={module.id}
-                    className="play-module-view"
-                    hidden={activeModule !== module.id}
-                    aria-hidden={activeModule !== module.id}
-                  >
-                    {renderModule(module.id)}
-                  </div>
-                ))}
-              </div>
             </div>
+          </section>
+
+          <div className="play-skills-column">
+            <PericiasSection
+              atributos={atributosNum}
+              sor={sor}
+              nivel={nivel}
+              fichaId={ficha.ID}
+              nomePersonagem={ficha["Nome do Personagem"]}
+              bonusManual={bonusManual}
+              setBonusManual={(value) => {
+                setBonusManual(value);
+                setHasChanges(true);
+              }}
+              pontosDisponiveis={pontosPericia}
+              limitePorPericia={limitePorPericia}
+              registrarRolagem={(rolagem) =>
+                setHistoricoRolagens((prev) => [
+                  {
+                    localId: `pericia-${Date.now()}`,
+                    Horario: rolagem.horario,
+                    "Nome do Personagem": rolagem.personagem,
+                    Tipo: "Perícia",
+                    Nome: rolagem.pericia,
+                    Valor: rolagem.valor,
+                    "Tipo de Sucesso": rolagem.tipoSucesso,
+                  },
+                  ...prev,
+                ])
+              }
+            />
           </div>
         </section>
       </main>
