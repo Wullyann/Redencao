@@ -5,10 +5,8 @@ import {
   conectarCanalPortraitRemoto,
   obterTokenPortrait,
 } from "../utils/portraitRealtime";
+import { apiGet } from "../utils/api";
 import "./Portrait.css";
-
-const BASE_URL =
-  "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
 
 const CORES_SUCESSO = {
   Desastre: "#ff244f",
@@ -186,19 +184,22 @@ export default function Portrait() {
       setErro("Portrait sem personagem selecionado.");
       return undefined;
     }
+    if (!tokenRealtime) {
+      setErro("Link do Portrait sem autorização. Gere novamente pela ficha.");
+      return undefined;
+    }
 
     let ativo = true;
 
-    const carregarFicha = async () => {
+    const carregarPortrait = async () => {
       try {
-        const resposta = await fetch(
-          `${BASE_URL}?sheet=Fichas&_=${Date.now()}`,
-          { cache: "no-store" }
+        const dados = await apiGet(
+          { acao: "portrait", id, portraitToken: tokenRealtime },
+          { public: true }
         );
-        const fichas = await resposta.json();
-        const encontrada = fichas.find((item) => String(item.ID) === String(id));
-
         if (!ativo) return;
+
+        const encontrada = dados.ficha;
         if (!encontrada) {
           setErro("Personagem não encontrado.");
           return;
@@ -207,43 +208,12 @@ export default function Portrait() {
         fichaCarregadaRef.current = true;
         setFicha(encontrada);
         setErro("");
-      } catch (error) {
-        console.error("Erro ao atualizar portrait:", error);
-        if (ativo && !fichaCarregadaRef.current) {
-          setErro("Não foi possível carregar o portrait.");
-        }
-      }
-    };
 
-    carregarFicha();
-    const intervalo = window.setInterval(carregarFicha, 2500);
-
-    return () => {
-      ativo = false;
-      window.clearInterval(intervalo);
-    };
-  }, [id]);
-
-  // A planilha permanece apenas como fallback para outra máquina/navegador.
-  useEffect(() => {
-    if (!id) return undefined;
-    let ativo = true;
-
-    const carregarRolagens = async () => {
-      try {
-        const resposta = await fetch(
-          `${BASE_URL}?sheet=Rolagens&_=${Date.now()}`,
-          { cache: "no-store" }
-        );
-        const todas = await resposta.json();
-        const doPersonagem = todas.filter(
-          (item) => String(item["ID da Ficha"]) === String(id)
-        );
-        const ultima = doPersonagem.at(-1);
-        if (!ativo || !ultima) return;
-
+        const todas = Array.isArray(dados.rolagens) ? dados.rolagens : [];
+        const ultima = todas.at(-1);
+        if (!ultima) return;
         const assinaturaPlanilha = [
-          doPersonagem.length,
+          todas.length,
           ultima.Horario || ultima["Horário"] || "",
           assinaturaRolagem(ultima),
         ].join("|");
@@ -253,24 +223,26 @@ export default function Portrait() {
           ultimaAssinaturaPlanilhaRef.current = assinaturaPlanilha;
           return;
         }
-
         if (assinaturaPlanilha === ultimaAssinaturaPlanilhaRef.current) return;
         ultimaAssinaturaPlanilhaRef.current = assinaturaPlanilha;
         exibirRolagem(ultima, "planilha");
       } catch (error) {
-        console.error("Erro ao atualizar rolagens do portrait:", error);
+        console.error("Erro ao atualizar portrait:", error);
+        if (ativo && !fichaCarregadaRef.current) {
+          setErro(error.message || "Não foi possível carregar o portrait.");
+        }
       }
     };
 
-    carregarRolagens();
-    const intervalo = window.setInterval(carregarRolagens, 1200);
+    carregarPortrait();
+    const intervalo = window.setInterval(carregarPortrait, 1500);
 
     return () => {
       ativo = false;
       window.clearInterval(intervalo);
       window.clearTimeout(timerRolagemRef.current);
     };
-  }, [id, exibirRolagem]);
+  }, [id, tokenRealtime, exibirRolagem]);
 
   if (erro) {
     return (

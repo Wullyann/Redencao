@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Brain, Footprints, Heart, Minus, Plus, Zap } from "lucide-react";
+import { Brain, Footprints, Heart, Minus, Plus, Shield, Zap } from "lucide-react";
 
 const STATUS = [
   { key: "pv", label: "Vida", short: "PV", icon: Heart, color: "#ff425d" },
@@ -19,6 +19,10 @@ export default function VitalStatsSection({
   setSanAtual,
   agi,
   vig,
+  rd,
+  rdObservacao,
+  onRdChange,
+  onRdObservacaoChange,
 }) {
   const [modificadores, setModificadores] = useState({ pv: "", san: "", pe: "" });
   const deslocamento = Math.floor((Number(agi) + Number(vig)) / 20) + 7;
@@ -52,11 +56,35 @@ export default function VitalStatsSection({
           <strong>Recursos do agente</strong>
         </div>
 
-        <div className="vital-movement" title="Deslocamento do personagem">
-          <Footprints size={17} />
-          <div>
-            <strong>{deslocamento}m</strong>
-            <span>deslocamento</span>
+        <div className="vital-heading-tools">
+          <div className="vital-movement" title="Deslocamento do personagem">
+            <Footprints size={17} />
+            <div>
+              <strong>{deslocamento}m</strong>
+              <span>deslocamento</span>
+            </div>
+          </div>
+
+          <div className="vital-rd" title="Resistência a dano. O valor é informativo e não reduz dano automaticamente.">
+            <Shield size={17} />
+            <label>
+              <span>RD geral</span>
+              <input
+                type="number"
+                min="0"
+                value={rd ?? 0}
+                onChange={(event) => onRdChange?.(event.target.value)}
+                aria-label="RD geral"
+              />
+            </label>
+            <input
+              className="vital-rd-note"
+              type="text"
+              value={rdObservacao || ""}
+              onChange={(event) => onRdObservacaoChange?.(event.target.value)}
+              placeholder="Observação da RD"
+              aria-label="Observação da RD"
+            />
           </div>
         </div>
       </div>

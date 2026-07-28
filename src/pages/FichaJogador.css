@@ -1491,3 +1491,143 @@
   }
 }
 
+
+/* Atualização 13 — RD e pendência de progressão */
+.vital-heading-tools {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vital-rd {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: min(100%, 390px);
+  padding: 9px 11px;
+  border: 1px solid rgba(212, 175, 55, 0.36);
+  border-radius: 12px;
+  background: rgba(8, 8, 8, 0.82);
+  color: #d4af37;
+}
+
+.vital-rd label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  color: #bda66c;
+  font-size: 0.73rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vital-rd input {
+  box-sizing: border-box;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 7px;
+  background: #0b0b0b;
+  color: #f1d983;
+  outline: none;
+}
+
+.vital-rd label input {
+  width: 62px;
+  padding: 7px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.vital-rd .vital-rd-note {
+  flex: 1;
+  min-width: 130px;
+  padding: 7px 9px;
+}
+
+.vital-rd input:focus {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.12);
+}
+
+.progress-pending-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(247, 201, 72, 0.5);
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(247, 201, 72, 0.12), rgba(18, 14, 6, 0.92));
+  color: #f7d86d;
+}
+
+.progress-pending-banner > div {
+  flex: 1;
+}
+
+.progress-pending-banner strong,
+.progress-pending-banner span {
+  display: block;
+}
+
+.progress-pending-banner span {
+  margin-top: 3px;
+  color: #c7b989;
+  font-size: 0.84rem;
+}
+
+.progress-pending-banner button {
+  padding: 9px 12px;
+  border: 1px solid #d4af37;
+  border-radius: 8px;
+  background: #d4af37;
+  color: #080808;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .vital-heading-tools,
+  .vital-rd {
+    width: 100%;
+  }
+
+  .vital-rd {
+    flex-wrap: wrap;
+  }
+
+  .vital-rd .vital-rd-note {
+    flex-basis: 100%;
+  }
+
+  .progress-pending-banner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+.progress-pending-banner > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 250px;
+}
+
+.progress-pending-banner article {
+  display: grid;
+  gap: 3px;
+  min-width: 190px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.progress-pending-banner article small {
+  color: #948868;
+  font-size: 0.72rem;
+}
+
+.progress-pending-banner article button {
+  margin-top: 5px;
+}

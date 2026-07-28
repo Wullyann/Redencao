@@ -1,12 +1,23 @@
-# React + Vite
+# Redenção — Atualização 13
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de fichas e ferramentas de campanha em React + Vite, com backend em Google Apps Script, Google Planilhas e Google Drive.
 
-Currently, two official plugins are available:
+## Desenvolvimento
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+cp .env.example .env.local
+npm install
+npm test
+npm run build
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Configure `VITE_APPS_SCRIPT_URL` com a URL `/exec` da implantação atual do Apps Script.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Instalação completa
+
+Leia [`INSTALACAO-ATUALIZACAO-13.md`](./INSTALACAO-ATUALIZACAO-13.md) antes de substituir o backend ou publicar na Vercel.
+
+## Backend
+
+O arquivo completo está em `apps-script/Code.js`. Execute `configurarAtualizacao13()` uma vez após colar e salvar o código. A função pode ser repetida com segurança.

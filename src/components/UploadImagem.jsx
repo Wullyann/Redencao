@@ -1,8 +1,6 @@
 // src/components/UploadImagem.jsx
 import React, { useRef, useState } from "react";
-
-const UPLOAD_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbxuerpEz0bT5UO6tNPZnMJikScsM7HbYJU1X35YcbdNF54baV8IpceP3PQDLpGuKuMQoQ/exec";
+import { uploadMediaFile } from "../utils/mediaUpload";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -45,34 +43,10 @@ export default function UploadImagem({ imagemAtual = "", onUploadComplete }) {
       setMensagem("Enviando imagem...");
 
       try {
-        // Sem cabeçalho personalizado para evitar bloqueio CORS do Google Apps Script.
-        const response = await fetch(UPLOAD_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({
-            fileName: file.name,
-            base64,
-            contentType: file.type,
-          }),
-        });
+        const uploaded = await uploadMediaFile(file, { fileName: file.name });
 
-        const responseText = await response.text();
-        let json;
-
-        try {
-          json = JSON.parse(responseText);
-        } catch {
-          throw new Error("O servidor devolveu uma resposta inválida.");
-        }
-
-        const sucesso = json.status === "success" || json.status === "sucesso";
-        const url = json.url || json.link;
-
-        if (!sucesso || !url) {
-          throw new Error(json.message || json.mensagem || "Falha no envio da imagem.");
-        }
-
-        setPreview(url);
-        onUploadComplete?.(url);
+        setPreview(uploaded.url);
+        onUploadComplete?.(uploaded.url);
         setMensagem("Imagem enviada. Clique em Salvar Ficha.");
       } catch (error) {
         console.error("Erro no upload da imagem:", error);
